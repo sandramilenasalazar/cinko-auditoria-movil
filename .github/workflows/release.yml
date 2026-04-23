@@ -21,32 +21,36 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Setup EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Instalar Expo CLI
+        run: npm install -g @expo/cli
 
-      - name: Construir APK con EAS
-        run: eas build --platform android --profile preview --non-interactive
+      - name: Generar proyecto Android nativo
+        run: npx expo prebuild --platform android --clean
 
-      - name: Obtener URL del APK
-        run: |
-          URL=$(eas build:list --platform android --status finished --limit 1 --non-interactive --json | jq -r '.[0].artifacts.buildUrl')
-          echo "APK_URL=$URL" >> $GITHUB_ENV
+      - name: Dar permisos a Gradle
+        run: chmod +x android/gradlew
 
-      - name: Descargar APK
-        run: curl -L "${{ env.APK_URL }}" -o cinko-auditoria-movil.apk
+      - name: Build APK
+        run: cd android && ./gradlew assembleDebug --no-daemon
+
+      - name: Renombrar APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk cinko-auditoria-movil.apk
 
       - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Auditoria Movil ${{ github.ref_name }}"
+          name: "Cinko Auditoria Movil ${{ github.ref_name }}"
           body: |
-            ## Auditoria Movil ${{ github.ref_name }}
+            ## Cinko Auditoria Movil ${{ github.ref_name }}
 
             ### Instalación en Android
             1. Descarga el archivo **cinko-auditoria-movil.apk**
