@@ -1,0 +1,55 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    name: Build APK y crear Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Construir APK con EAS
+        run: eas build --platform android --profile preview --non-interactive
+
+      - name: Obtener URL del APK
+        run: |
+          URL=$(eas build:list --platform android --status finished --limit 1 --non-interactive --json | jq -r '.[0].artifacts.buildUrl')
+          echo "APK_URL=$URL" >> $GITHUB_ENV
+
+      - name: Descargar APK
+        run: curl -L "${{ env.APK_URL }}" -o cinko-auditoria-movil.apk
+
+      - name: Crear GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Auditoria Movil ${{ github.ref_name }}"
+          body: |
+            ## Auditoria Movil ${{ github.ref_name }}
+
+            ### Instalación en Android
+            1. Descarga el archivo **cinko-auditoria-movil.apk**
+            2. En tu dispositivo Android, ve a **Ajustes → Seguridad** y habilita **Instalar apps de fuentes desconocidas**
+            3. Abre el archivo `.apk` descargado e instala la aplicación
+          files: cinko-auditoria-movil.apk
+          draft: false
+          prerelease: false

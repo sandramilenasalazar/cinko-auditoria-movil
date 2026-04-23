@@ -1,5 +1,5 @@
 {
-  "name": "auditoria-app",
+  "name": "cinko-auditoria-movil",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -9,10 +9,21 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~55.0.6",
-    "expo-status-bar": "~55.0.4",
-    "react": "19.2.0",
-    "react-native": "0.83.2"
+    "@react-navigation/native": "^6.1.17",
+    "@react-navigation/stack": "^6.4.1",
+    "expo": "^54.0.33",
+    "expo-document-picker": "~14.0.8",
+    "expo-image-picker": "~17.0.10",
+    "expo-secure-store": "~15.0.8",
+    "expo-sqlite": "~16.0.10",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-paper": "^5.12.3",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "zustand": "^4.5.2"
   },
   "private": true
 }

@@ -1,29 +1,47 @@
 {
   "expo": {
-    "name": "auditoria-app",
-    "slug": "auditoria-app",
+    "name": "cinko-auditoria-movil",
+    "slug": "cinko-auditoria-movil",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./img/Logo5ing3.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F0F4FF"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.auditoria.movil",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-image-picker",
+      "expo-document-picker"
+    ],
+    "newArchEnabled": false,
+    "extra": {
+      "eas": {
+        "projectId": "39f8128c-1a32-42ba-87c1-0ee2b452035f"
+      }
+    },
+    "owner": "sandramilenasalazar"
   }
 }
