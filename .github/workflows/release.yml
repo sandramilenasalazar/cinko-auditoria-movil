@@ -43,14 +43,16 @@ jobs:
         run: |
           sed -i '/defaultConfig {/a\            ndk { abiFilters "arm64-v8a", "armeabi-v7a" }' android/app/build.gradle
 
+      - name: Decodificar keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/cinko-auditoria.keystore
+
       - name: Configurar firma del APK
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > cinko-auditoria.keystore
           cat >> android/app/build.gradle << 'EOF'
 
           android.signingConfigs {
             release {
-              storeFile file("../../../../cinko-auditoria.keystore")
+              storeFile file("/tmp/cinko-auditoria.keystore")
               storePassword System.getenv("KEYSTORE_PASSWORD")
               keyAlias System.getenv("KEY_ALIAS")
               keyPassword System.getenv("KEY_PASSWORD")
@@ -58,10 +60,6 @@ jobs:
           }
           android.buildTypes.release.signingConfig = android.signingConfigs.release
           EOF
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Build APK
         run: cd android && ./gradlew assembleRelease --no-daemon
