@@ -43,7 +43,10 @@ jobs:
         run: cd android && ./gradlew assembleRelease --no-daemon
 
       - name: Renombrar APK
-        run: cp android/app/build/outputs/apk/release/app-release-unsigned.apk cinko-auditoria-movil.apk
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "APK encontrado: $APK"
+          cp "$APK" cinko-auditoria-movil.apk
 
       - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
