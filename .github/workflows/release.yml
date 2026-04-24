@@ -46,33 +46,22 @@ jobs:
       - name: Decodificar keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 --decode > /tmp/cinko-auditoria.keystore
 
-      - name: Configurar firma del APK
-        run: |
-          cat >> android/app/build.gradle << 'EOF'
-
-          android.signingConfigs {
-            release {
-              storeFile file("/tmp/cinko-auditoria.keystore")
-              storePassword System.getenv("KEYSTORE_PASSWORD")
-              keyAlias System.getenv("KEY_ALIAS")
-              keyPassword System.getenv("KEY_PASSWORD")
-            }
-          }
-          android.buildTypes.release.signingConfig = android.signingConfigs.release
-          EOF
-
-      - name: Build APK
+      - name: Build APK sin firma
         run: cd android && ./gradlew assembleRelease --no-daemon
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Renombrar APK
+      - name: Firmar APK con apksigner
         run: |
-          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          echo "APK encontrado: $APK"
-          cp "$APK" cinko-auditoria-movil.apk
+          APK_UNSIGNED=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          APKSIGNER=$(find $ANDROID_SDK_ROOT/build-tools -name "apksigner" | sort -r | head -1)
+          echo "APK: $APK_UNSIGNED"
+          echo "apksigner: $APKSIGNER"
+          $APKSIGNER sign \
+            --ks /tmp/cinko-auditoria.keystore \
+            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+            --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
+            --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
+            --out cinko-auditoria-movil.apk \
+            "$APK_UNSIGNED"
 
       - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
