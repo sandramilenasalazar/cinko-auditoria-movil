@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, memo } from 'react';
+import React, { useEffect, useState, useCallback, memo, useRef } from 'react';
 import {
   View,
   SectionList,
@@ -34,6 +34,7 @@ import {
 import { uploadEvidencia, deleteEvidencia } from '../api/evidencia';
 import { getStoredAccessToken } from '../api/auth';
 import { API_BASE_URL } from '../api/config';
+import NetInfo from '@react-native-community/netinfo';
 
 const buildUri = (uri) =>
   uri && uri.startsWith('/') ? `${API_BASE_URL.replace('/api/v1', '')}${uri}` : uri;
@@ -248,6 +249,28 @@ const Nivel2Item = memo(function Nivel2Item({
   );
 });
 
+// ─── SyncBar ─────────────────────────────────────────────────────────────────
+function SyncBar({ status, isOnline }) {
+  if (!isOnline) {
+    return (
+      <View style={[styles.syncBar, styles.syncBarOffline]}>
+        <Text style={styles.syncBarText}>Sin conexión — los cambios no se guardarán</Text>
+      </View>
+    );
+  }
+  if (status === 'idle') return null;
+  return (
+    <View style={[styles.syncBar, status === 'saved' && styles.syncBarSaved]}>
+      {status === 'saving' && (
+        <ActivityIndicator size={12} color="#fff" style={styles.syncBarSpinner} />
+      )}
+      <Text style={styles.syncBarText}>
+        {status === 'saving' ? 'Guardando...' : 'Guardado ✓'}
+      </Text>
+    </View>
+  );
+}
+
 // ─── EjecutarAuditoriaScreen ─────────────────────────────────────────────────
 export default function EjecutarAuditoriaScreen({ route }) {
   const { audProyecto } = route.params;
@@ -259,6 +282,10 @@ export default function EjecutarAuditoriaScreen({ route }) {
   const [saving, setSaving] = useState(new Set());
   const [snackbar, setSnackbar] = useState('');
   const [authToken, setAuthToken] = useState(null);
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [isOnline, setIsOnline] = useState(true);
+  const savedTimerRef = useRef(null);
+  const wasSavingRef = useRef(false);
 
   const [kbHeight, setKbHeight] = useState(0);
 
@@ -318,6 +345,26 @@ export default function EjecutarAuditoriaScreen({ route }) {
       .catch(() => setSnackbar('Error al cargar los ítems de auditoría'))
       .finally(() => setLoading(false));
   }, [idAud]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(state.isConnected ?? true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (saving.size > 0) {
+      wasSavingRef.current = true;
+      setSyncStatus('saving');
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    } else if (wasSavingRef.current) {
+      wasSavingRef.current = false;
+      setSyncStatus('saved');
+      savedTimerRef.current = setTimeout(() => setSyncStatus('idle'), 2000);
+    }
+    return () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current); };
+  }, [saving]);
 
   // ── Helpers de estado
   const addSaving = (id) => setSaving((p) => new Set([...p, id]));
@@ -630,6 +677,7 @@ export default function EjecutarAuditoriaScreen({ route }) {
 
   return (
     <View style={styles.container}>
+      <SyncBar status={syncStatus} isOnline={isOnline} />
       <SectionList
         sections={sections}
         keyExtractor={(item) => String(item.id)}
@@ -1059,4 +1107,18 @@ const styles = StyleSheet.create({
 
   // Snackbar
   snackbar: { backgroundColor: COLORS.navy },
+
+  // SyncBar
+  syncBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 5,
+    gap: 6,
+  },
+  syncBarSaved: { backgroundColor: '#2E7D32' },
+  syncBarOffline: { backgroundColor: '#B71C1C' },
+  syncBarSpinner: { marginRight: 2 },
+  syncBarText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 });
