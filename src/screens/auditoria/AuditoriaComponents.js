@@ -43,6 +43,10 @@ export const generateUUID = () => {
 export const buildUri = (uri) =>
   uri && uri.startsWith('/') ? `${API_BASE_URL.replace('/api/v1', '')}${uri}` : uri;
 
+// Devuelve true solo para URIs que React Native puede renderizar sin crashear
+export const isValidUri = (uri) =>
+  typeof uri === 'string' && uri.length > 0 && /^(https?|file):\/\//i.test(uri);
+
 // ─── ConformeToggle ──────────────────────────────────────────────────────────
 export function ConformeToggle({ value, onChange, disabled }) {
   return (
@@ -67,17 +71,18 @@ export function ConformeToggle({ value, onChange, disabled }) {
 
 // ─── EvidenciaItem ────────────────────────────────────────────────────────────
 export function EvidenciaItem({ evidencia, onDelete, authToken }) {
-  const source = evidencia.tipo === 'IMAGEN'
-    ? {
-        uri: buildUri(evidencia.uri),
-        ...(authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : {}),
-      }
+  const builtUri = evidencia.tipo === 'IMAGEN' ? buildUri(evidencia.uri) : null;
+  const validUri = isValidUri(builtUri) ? builtUri : null;
+  const source = validUri
+    ? { uri: validUri, ...(authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : {}) }
     : null;
 
   return (
     <View style={styles.evidenciaItem}>
-      {evidencia.tipo === 'IMAGEN' ? (
+      {evidencia.tipo === 'IMAGEN' && source ? (
         <Image source={source} style={styles.evidenciaThumb} />
+      ) : evidencia.tipo === 'IMAGEN' ? (
+        <View style={[styles.evidenciaThumb, { backgroundColor: COLORS.border }]} />
       ) : (
         <View style={styles.evidenciaDoc}>
           <IconButton icon="file-document-outline" size={20} iconColor={COLORS.primary} style={styles.evidenciaDocIcon} />

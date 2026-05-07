@@ -131,6 +131,17 @@ export function deleteEvidenciaOffline(uuid, hallazgoUuid, itemUuid, idAudProyec
   } catch (_) {}
 }
 
+export function saveAcompanante(idAudProyecto, nombre, firmaBase64) {
+  try {
+    getDatabase().runSync(
+      `INSERT OR REPLACE INTO aud_acompanante
+         (id_aud_proyecto, nombre_acompanante, firma_base64, pending_sync)
+       VALUES (?, ?, ?, 1)`,
+      [idAudProyecto, nombre, firmaBase64]
+    );
+  } catch (_) {}
+}
+
 export function getPendingCount(idAudProyecto) {
   try {
     const row = getDatabase().getFirstSync(
@@ -152,8 +163,11 @@ export function getPendingCount(idAudProyecto) {
               SELECT uuid FROM aud_resultado_item WHERE id_aud_proyecto = ?
             )
           )
+      ) + (
+        SELECT COUNT(*) FROM aud_acompanante
+        WHERE id_aud_proyecto = ? AND pending_sync = 1
       ) AS total`,
-      [idAudProyecto, idAudProyecto, idAudProyecto]
+      [idAudProyecto, idAudProyecto, idAudProyecto, idAudProyecto]
     );
     return row?.total ?? 0;
   } catch (_) {

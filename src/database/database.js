@@ -158,6 +158,16 @@ export const initDatabase = () => {
         ON UPDATE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS aud_acompanante (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_aud_proyecto INTEGER NOT NULL UNIQUE,
+      nombre_acompanante TEXT NOT NULL,
+      firma_base64 TEXT,
+      firma_url TEXT,
+      pending_sync INTEGER DEFAULT 1
+        CHECK (pending_sync IN (0,1))
+    );
+
     CREATE TABLE IF NOT EXISTS sync_checkpoint (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       id_aud_proyecto INTEGER,

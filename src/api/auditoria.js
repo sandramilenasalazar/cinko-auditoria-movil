@@ -24,3 +24,14 @@ export const deleteHallazgo = (idAudProyecto, itemUuid, hallazgoUuid) =>
     `/auditoria/${idAudProyecto}/items/${itemUuid}/hallazgos/${hallazgoUuid}`,
     { method: 'DELETE' }
   );
+
+// Guarda o sobreescribe acompañante + firma
+export const upsertAcompanante = (idAudProyecto, body) =>
+  apiRequest(`/auditoria/${idAudProyecto}/acompanante`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+
+// Consulta el acompañante existente (404 si aún no hay)
+export const getAcompanante = (idAudProyecto) =>
+  apiRequest(`/auditoria/${idAudProyecto}/acompanante`);

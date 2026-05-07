@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, SectionList, StyleSheet } from 'react-native';
+import { View, SectionList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Text, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { useAuditoria } from '../hooks/useAuditoria';
-import { SyncBar, Nivel2Item, AuditoriaProgressBar, COLORS, DEFAULT_RESULT } from './auditoria/AuditoriaComponents';
+import { SyncBar, Nivel2Item, AuditoriaProgressBar, COLORS, DEFAULT_RESULT, isValidUri } from './auditoria/AuditoriaComponents';
 import { HallazgoModal } from './auditoria/HallazgoModal';
+import { FirmaModal } from './auditoria/FirmaModal';
 
 export default function EjecutarAuditoriaScreen({ route }) {
   const { audProyecto } = route.params;
@@ -36,6 +37,10 @@ export default function EjecutarAuditoriaScreen({ route }) {
     handleDeleteEvidencia,
     handleDeleteHallazgo,
     avance,
+    acompanante,
+    firmaModalVisible,
+    setFirmaModalVisible,
+    handleGuardarAcompanante,
   } = useAuditoria(audProyecto.id);
 
   if (loading) {
@@ -76,11 +81,48 @@ export default function EjecutarAuditoriaScreen({ route }) {
           />
         )}
         contentContainerStyle={styles.list}
+        ListFooterComponent={
+          <View style={styles.acompananteCard}>
+            <Text style={styles.acompananteTitle}>Acompañante de auditoría</Text>
+            {acompanante?.nombre_acompanante ? (
+              <>
+                <Text style={styles.acompananteNombre}>✓ {acompanante.nombre_acompanante}</Text>
+                {isValidUri(acompanante.firma_url) && (
+                  <Image
+                    source={{ uri: acompanante.firma_url }}
+                    style={styles.acompananteFirma}
+                    resizeMode="contain"
+                  />
+                )}
+                <TouchableOpacity onPress={() => setFirmaModalVisible(true)}>
+                  <Text style={styles.acompananteEditar}>Editar</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.acompananteDesc}>
+                  Registra el nombre y firma de quien acompañó la auditoría por parte del cliente.
+                </Text>
+                <TouchableOpacity style={styles.acompananteBtn} onPress={() => setFirmaModalVisible(true)}>
+                  <Text style={styles.acompananteBtnText}>Registrar acompañante</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.centered}>
             <Text style={styles.emptyText}>No hay ítems configurados para esta auditoría</Text>
           </View>
         }
+      />
+
+      <FirmaModal
+        visible={firmaModalVisible}
+        onDismiss={() => setFirmaModalVisible(false)}
+        onConfirm={handleGuardarAcompanante}
+        initialNombre={acompanante?.nombre_acompanante ?? ''}
+        initialFirmaUrl={acompanante?.firma_url ?? null}
       />
 
       <HallazgoModal
@@ -129,4 +171,28 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   snackbar: { backgroundColor: COLORS.navy },
+
+  // Tarjeta acompañante
+  acompananteCard: {
+    margin: 12,
+    marginTop: 4,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  acompananteTitle: { fontWeight: '700', fontSize: 14, color: COLORS.navy, marginBottom: 8 },
+  acompananteDesc: { fontSize: 13, color: COLORS.gray, marginBottom: 12, lineHeight: 18 },
+  acompananteBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  acompananteBtnText: { color: COLORS.white, fontWeight: '700', fontSize: 14 },
+  acompananteNombre: { fontSize: 14, color: COLORS.si, fontWeight: '600', marginBottom: 8 },
+  acompananteFirma: { width: '100%', height: 70, borderRadius: 6, marginBottom: 8, backgroundColor: '#F8F9FF' },
+  acompananteEditar: { fontSize: 13, color: COLORS.primary, fontWeight: '600', textAlign: 'right' },
 });

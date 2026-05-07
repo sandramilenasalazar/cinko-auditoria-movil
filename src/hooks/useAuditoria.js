@@ -3,7 +3,7 @@ import { Keyboard } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import NetInfo from '@react-native-community/netinfo';
-import { getAuditoriaItems, upsertResultadoItem, addHallazgo, deleteHallazgo } from '../api/auditoria';
+import { getAuditoriaItems, upsertResultadoItem, addHallazgo, deleteHallazgo, upsertAcompanante, getAcompanante } from '../api/auditoria';
 import { uploadEvidencia, deleteEvidencia } from '../api/evidencia';
 import { getStoredAccessToken } from '../api/auth';
 import { sendErrorLogs } from '../api/errorLog';
@@ -16,6 +16,7 @@ import {
   saveEvidencia,
   deleteHallazgoOffline,
   deleteEvidenciaOffline,
+  saveAcompanante,
   getPendingCount,
 } from '../services/offlineStore';
 import { syncPendingData } from '../services/syncAuditoria';
@@ -37,6 +38,8 @@ export function useAuditoria(idAud) {
   const [modalMode, setModalMode] = useState('predefinido');
   const [selectedHallazgoDef, setSelectedHallazgoDef] = useState(null);
   const [freeText, setFreeText] = useState('');
+  const [acompanante, setAcompanante] = useState(null);
+  const [firmaModalVisible, setFirmaModalVisible] = useState(false);
 
   const savedTimerRef = useRef(null);
   const prevIsOnlineRef = useRef(false);
@@ -97,6 +100,10 @@ export function useAuditoria(idAud) {
         if (!isNetworkError(e)) logError('EjecutarAuditoria', 'loadAuditoriaItems', e, isOnlineRef.current);
       })
       .finally(() => setLoading(false));
+
+    getAcompanante(idAud)
+      .then((data) => setAcompanante(data))
+      .catch(() => {});
   }, [idAud]);
 
   useEffect(() => {
@@ -397,23 +404,22 @@ export function useAuditoria(idAud) {
 
     try {
       const resp = await uploadEvidencia(idAud, hallazgoUuid, evidenciaUuid, uri, tipoEv, nombre);
-      if (resp?.uri) {
-        const serverUri = buildUri(resp.uri);
-        setResultsMap((prev) => {
-          const n = new Map(prev);
-          const it = n.get(idNivel2);
-          if (!it) return prev;
-          n.set(idNivel2, {
-            ...it,
-            hallazgos: it.hallazgos.map((h) =>
-              h.uuid === hallazgoUuid
-                ? { ...h, evidencias: h.evidencias.map((e) => e.uuid === evidenciaUuid ? { ...e, uri: serverUri } : e) }
-                : h
-            ),
-          });
-          return n;
+      const serverUri = resp?.uri ? buildUri(resp.uri) : null;
+      if (!serverUri) throw new Error('upload_no_uri');
+      setResultsMap((prev) => {
+        const n = new Map(prev);
+        const it = n.get(idNivel2);
+        if (!it) return prev;
+        n.set(idNivel2, {
+          ...it,
+          hallazgos: it.hallazgos.map((h) =>
+            h.uuid === hallazgoUuid
+              ? { ...h, evidencias: h.evidencias.map((e) => e.uuid === evidenciaUuid ? { ...e, uri: serverUri } : e) }
+              : h
+          ),
         });
-      }
+        return n;
+      });
     } catch (e) {
       setSnackbar('Error al subir evidencia');
       if (!isNetworkError(e)) logError('EjecutarAuditoria', 'handleAddEvidencia', e, isOnlineRef.current);
@@ -505,6 +511,37 @@ export function useAuditoria(idAud) {
     });
   }, [idAud]);
 
+  // ── Guardar acompañante
+  const handleGuardarAcompanante = useCallback(async (nombre, firmaBase64) => {
+    setFirmaModalVisible(false);
+
+    if (!isOnlineRef.current) {
+      saveAcompanante(idAud, nombre, firmaBase64);
+      setPendingCount((c) => c + 1);
+      setAcompanante((prev) => ({ ...prev, nombre_acompanante: nombre, firma_url: null }));
+      setSnackbar('Firma guardada — se sincronizará al reconectar');
+      return;
+    }
+
+    try {
+      const resp = await upsertAcompanante(idAud, {
+        nombre_acompanante: nombre,
+        firma_acompanante: firmaBase64,
+      });
+      // Cache-buster: el servidor sobreescribe el mismo archivo, por lo que
+      // la URL no cambia. Agregamos ?t=... para que React Native descargue
+      // la imagen nueva en lugar de mostrar la versión cacheada.
+      const firmaUrlFresh = resp?.firma_url
+        ? `${resp.firma_url}?t=${Date.now()}`
+        : null;
+      setAcompanante({ ...resp, firma_url: firmaUrlFresh });
+      setSnackbar('Acompañante registrado ✓');
+    } catch (e) {
+      setSnackbar('Error al guardar la firma');
+      if (!isNetworkError(e)) logError('EjecutarAuditoria', 'handleGuardarAcompanante', e, isOnlineRef.current);
+    }
+  }, [idAud]);
+
   return {
     sections,
     resultsMap,
@@ -534,5 +571,9 @@ export function useAuditoria(idAud) {
     handleAddEvidencia,
     handleDeleteEvidencia,
     handleDeleteHallazgo,
+    acompanante,
+    firmaModalVisible,
+    setFirmaModalVisible,
+    handleGuardarAcompanante,
   };
 }

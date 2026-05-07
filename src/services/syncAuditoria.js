@@ -1,5 +1,5 @@
 import { getDatabase } from '../database/database';
-import { upsertResultadoItem, addHallazgo, deleteHallazgo } from '../api/auditoria';
+import { upsertResultadoItem, addHallazgo, deleteHallazgo, upsertAcompanante } from '../api/auditoria';
 import { uploadEvidencia, deleteEvidencia } from '../api/evidencia';
 import { logError } from './errorLogger';
 import { getPendingCount } from './offlineStore';
@@ -68,7 +68,7 @@ export async function syncPendingData(idAudProyecto) {
   );
   for (const ev of evidencias) {
     try {
-      await uploadEvidencia(
+      const resp = await uploadEvidencia(
         idAudProyecto,
         ev.id_resultado_hallazgo_uuid,
         ev.uuid,
@@ -76,11 +76,15 @@ export async function syncPendingData(idAudProyecto) {
         ev.tipo,
         ev.descripcion
       );
+      // Verificar que el servidor realmente guardó el archivo
+      const serverUri = resp?.uri ?? resp?.url;
+      if (!serverUri) throw new Error('upload_no_uri');
       db.runSync(
         `UPDATE aud_hallazgo_evidencia SET pending_sync = 0, file_local_path = NULL WHERE uuid = ?`,
         [ev.uuid]
       );
     } catch (e) {
+      // pending_sync queda en 1 y file_local_path intacto → se reintenta en el próximo sync
       logError('sync', 'uploadEvidencia', e, true);
     }
   }
@@ -117,6 +121,28 @@ export async function syncPendingData(idAudProyecto) {
       db.runSync(`DELETE FROM aud_resultado_hallazgo WHERE uuid = ?`, [h.uuid]);
     } catch (e) {
       logError('sync', 'deleteHallazgo', e, true);
+    }
+  }
+
+  // 6. Acompañante pendiente
+  const acomp = db.getFirstSync(
+    `SELECT nombre_acompanante, firma_base64
+     FROM aud_acompanante
+     WHERE id_aud_proyecto = ? AND pending_sync = 1`,
+    [idAudProyecto]
+  );
+  if (acomp) {
+    try {
+      await upsertAcompanante(idAudProyecto, {
+        nombre_acompanante: acomp.nombre_acompanante,
+        firma_acompanante: acomp.firma_base64,
+      });
+      db.runSync(
+        `UPDATE aud_acompanante SET pending_sync = 0 WHERE id_aud_proyecto = ?`,
+        [idAudProyecto]
+      );
+    } catch (e) {
+      logError('sync', 'upsertAcompanante', e, true);
     }
   }
 
