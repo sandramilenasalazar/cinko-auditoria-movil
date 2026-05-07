@@ -18,14 +18,17 @@ export const uploadEvidencia = async (idAudProyecto, hallazgoUuid, evidenciaUuid
   formData.append('uuid', evidenciaUuid);
   formData.append('tipo', tipo);
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   const res = await fetch(
     `${API_BASE_URL}/auditoria/${idAudProyecto}/hallazgos/${hallazgoUuid}/evidencia`,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
+      signal: controller.signal,
     }
-  );
+  ).finally(() => clearTimeout(timeoutId));
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

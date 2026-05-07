@@ -14,10 +14,7 @@ export const getDatabase = () => {
 export const initDatabase = () => {
   const database = getDatabase();
 
-  database.execSync(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA foreign_keys = ON;
-  `);
+  database.execSync(`PRAGMA journal_mode = WAL;`);
 
   database.execSync(`
     CREATE TABLE IF NOT EXISTS aud_version (
@@ -165,6 +162,19 @@ export const initDatabase = () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       id_aud_proyecto INTEGER,
       last_sync_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS error_log (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid          TEXT    NOT NULL UNIQUE,
+      timestamp     TEXT    NOT NULL,
+      screen        TEXT    NOT NULL,
+      action        TEXT    NOT NULL,
+      error_message TEXT    NOT NULL,
+      error_stack   TEXT,
+      is_online     INTEGER NOT NULL DEFAULT 0 CHECK (is_online IN (0, 1)),
+      synced        INTEGER NOT NULL DEFAULT 0 CHECK (synced IN (0, 1)),
+      app_version   TEXT    NOT NULL
     );
   `);
 };

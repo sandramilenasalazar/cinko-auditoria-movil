@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { logError } from '../services/errorLogger';
 import {
   View,
   FlatList,
@@ -98,6 +99,7 @@ export default function ProyectosScreen({ navigation }) {
         await logout();
       } else {
         setError(e.message || 'Error al cargar proyectos');
+        logError('Proyectos', 'cargarProyectos', e, true);
       }
     }
   }, [logout]);

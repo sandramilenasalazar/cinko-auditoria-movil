@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { Text, Card, Chip, Divider, ActivityIndicator, Button } from 'react-native-paper';
 import { getAudProyecto } from '../api/proyectos';
+import { logError } from '../services/errorLogger';
 
 const COLORS = {
   primary: '#1A3ABF',
@@ -53,7 +54,7 @@ export default function ProyectoDetalleScreen({ route, navigation }) {
   useEffect(() => {
     getAudProyecto(proyecto.id_proyecto ?? proyecto.id)
       .then(setAudProyecto)
-      .catch(() => setAudProyecto(null))
+      .catch((e) => { setAudProyecto(null); logError('ProyectoDetalle', 'loadAudProyecto', e, true); })
       .finally(() => setLoading(false));
   }, [proyecto]);
 
