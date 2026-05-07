@@ -2,7 +2,7 @@ import React from 'react';
 import { View, SectionList, StyleSheet } from 'react-native';
 import { Text, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { useAuditoria } from '../hooks/useAuditoria';
-import { SyncBar, Nivel2Item, COLORS, DEFAULT_RESULT } from './auditoria/AuditoriaComponents';
+import { SyncBar, Nivel2Item, AuditoriaProgressBar, COLORS, DEFAULT_RESULT } from './auditoria/AuditoriaComponents';
 import { HallazgoModal } from './auditoria/HallazgoModal';
 
 export default function EjecutarAuditoriaScreen({ route }) {
@@ -35,6 +35,7 @@ export default function EjecutarAuditoriaScreen({ route }) {
     handleAddEvidencia,
     handleDeleteEvidencia,
     handleDeleteHallazgo,
+    avance,
   } = useAuditoria(audProyecto.id);
 
   if (loading) {
@@ -49,6 +50,7 @@ export default function EjecutarAuditoriaScreen({ route }) {
   return (
     <View style={styles.container}>
       <SyncBar status={syncStatus} isOnline={isOnline} pendingCount={pendingCount} />
+      <AuditoriaProgressBar porcentaje={avance.porcentaje} auditados={avance.auditados} total={avance.total} />
 
       <SectionList
         sections={sections}

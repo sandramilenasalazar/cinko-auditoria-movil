@@ -216,6 +216,26 @@ export const Nivel2Item = memo(function Nivel2Item({
   );
 });
 
+// ─── AuditoriaProgressBar ────────────────────────────────────────────────────
+export function AuditoriaProgressBar({ porcentaje, auditados, total }) {
+  const complete = porcentaje >= 100;
+  const fillColor = complete ? COLORS.si : COLORS.primary;
+  return (
+    <View style={styles.pbContainer}>
+      <View style={styles.pbHeader}>
+        <Text style={styles.pbLabel}>Avance de auditoría</Text>
+        <Text style={[styles.pbPct, complete && styles.pbPctComplete]}>
+          {porcentaje}%
+        </Text>
+      </View>
+      <View style={styles.pbTrack}>
+        <View style={[styles.pbFill, { width: `${Math.min(porcentaje, 100)}%`, backgroundColor: fillColor }]} />
+      </View>
+      <Text style={styles.pbCounter}>{auditados} de {total} ítems auditados</Text>
+    </View>
+  );
+}
+
 // ─── SyncBar ─────────────────────────────────────────────────────────────────
 export function SyncBar({ status, isOnline, pendingCount }) {
   if (!isOnline) {
@@ -371,4 +391,27 @@ const styles = StyleSheet.create({
   syncBarOffline: { backgroundColor: '#B71C1C' },
   syncBarSpinner: { marginRight: 2 },
   syncBarText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+
+  // AuditoriaProgressBar
+  pbContainer: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  pbHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  pbLabel: { fontSize: 12, color: COLORS.gray, fontWeight: '600' },
+  pbPct: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
+  pbPctComplete: { color: COLORS.si },
+  pbTrack: {
+    height: 6,
+    backgroundColor: COLORS.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  pbFill: { height: '100%', borderRadius: 3 },
+  pbCounter: { fontSize: 11, color: COLORS.gray, textAlign: 'right' },
 });

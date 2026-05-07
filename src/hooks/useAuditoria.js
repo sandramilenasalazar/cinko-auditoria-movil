@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Keyboard } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -141,6 +141,15 @@ export function useAuditoria(idAud) {
     }
     return () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current); };
   }, [saving]);
+
+  const avance = useMemo(() => {
+    const allItems = sections.flatMap((s) => s.data);
+    const total = allItems.length;
+    if (total === 0) return { porcentaje: 0, auditados: 0, total: 0 };
+    const auditados = allItems.filter((item) => resultsMap.get(item.id)?.estado === 'AUDITADO').length;
+    const porcentaje = Math.round((auditados / total) * 1000) / 10;
+    return { porcentaje, auditados, total };
+  }, [sections, resultsMap]);
 
   const addSaving = (id) => setSaving((p) => new Set([...p, id]));
   const removeSaving = (id) => setSaving((p) => { const s = new Set(p); s.delete(id); return s; });
@@ -500,6 +509,7 @@ export function useAuditoria(idAud) {
     sections,
     resultsMap,
     loading,
+    avance,
     authToken,
     saving,
     snackbar,
