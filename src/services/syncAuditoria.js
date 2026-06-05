@@ -35,7 +35,7 @@ export async function syncPendingData(idAudProyecto) {
 
   // 2. Hallazgos nuevos
   const hallazgos = db.getAllSync(
-    `SELECT h.uuid, h.id_resultado_item_uuid, h.id_hallazgo_def, h.hallazgo_libre
+    `SELECT h.uuid, h.id_resultado_item_uuid, h.id_hallazgo_def, h.hallazgo_libre, h.tipo_libre
      FROM aud_resultado_hallazgo h
      JOIN aud_resultado_item i ON i.uuid = h.id_resultado_item_uuid
      WHERE i.id_aud_proyecto = ? AND h.pending_sync = 1 AND h.deleted_at IS NULL`,
@@ -47,6 +47,7 @@ export async function syncPendingData(idAudProyecto) {
         uuid: h.uuid,
         id_hallazgo_def: h.id_hallazgo_def,
         hallazgo_libre: h.hallazgo_libre,
+        tipo_libre: h.tipo_libre ?? null,
       });
       db.runSync(
         `UPDATE aud_resultado_hallazgo SET pending_sync = 0 WHERE uuid = ?`,

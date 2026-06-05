@@ -123,6 +123,7 @@ export const initDatabase = () => {
       id_resultado_item_uuid TEXT NOT NULL,
       id_hallazgo_def INTEGER,
       hallazgo_libre TEXT,
+      tipo_libre TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT,
       deleted_at TEXT,
@@ -187,4 +188,9 @@ export const initDatabase = () => {
       app_version   TEXT    NOT NULL
     );
   `);
+
+  // Migración: agrega tipo_libre a instalaciones existentes que no tienen la columna
+  try {
+    database.execSync(`ALTER TABLE aud_resultado_hallazgo ADD COLUMN tipo_libre TEXT`);
+  } catch (_) {}
 };

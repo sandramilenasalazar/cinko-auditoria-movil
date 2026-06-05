@@ -23,11 +23,15 @@ export default function EjecutarAuditoriaScreen({ route }) {
     modalVisible,
     modalItem,
     modalMode,
-    setModalMode,
+    handleModalModeChange,
+    editingHallazgo,
+    openEditModal,
     selectedHallazgoDef,
     setSelectedHallazgoDef,
     freeText,
     setFreeText,
+    tipoLibre,
+    setTipoLibre,
     handleConformeChange,
     handleObsBlur,
     openModal,
@@ -75,6 +79,7 @@ export default function EjecutarAuditoriaScreen({ route }) {
             onObsBlur={(obs) => handleObsBlur(item.id, obs)}
             onAddHallazgo={() => openModal(item)}
             onDeleteHallazgo={(uuid) => handleDeleteHallazgo(item.id, uuid)}
+            onEditHallazgo={(hallazgo) => openEditModal(item, hallazgo)}
             onAddEvidencia={(hallazgoUuid, tipo) => handleAddEvidencia(item.id, hallazgoUuid, tipo)}
             onDeleteEvidencia={(hallazgoUuid, evUuid) => handleDeleteEvidencia(item.id, hallazgoUuid, evUuid)}
             authToken={authToken}
@@ -130,11 +135,14 @@ export default function EjecutarAuditoriaScreen({ route }) {
         onDismiss={closeModal}
         item={modalItem}
         mode={modalMode}
-        onModeChange={setModalMode}
+        onModeChange={handleModalModeChange}
         selectedHallazgoDef={selectedHallazgoDef}
         onSelectHallazgoDef={setSelectedHallazgoDef}
         freeText={freeText}
         onFreeTextChange={setFreeText}
+        tipoLibre={tipoLibre}
+        onTipoLibreChange={setTipoLibre}
+        isEditing={!!editingHallazgo}
         resultsMap={resultsMap}
         onConfirm={handleConfirmHallazgo}
         kbHeight={kbHeight}

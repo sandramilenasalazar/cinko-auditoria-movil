@@ -13,6 +13,7 @@ import {
   saveResultadoItemRef,
   saveHallazgo,
   saveHallazgoRef,
+  updateHallazgo,
   saveEvidencia,
   deleteHallazgoOffline,
   deleteEvidenciaOffline,
@@ -38,6 +39,8 @@ export function useAuditoria(idAud) {
   const [modalMode, setModalMode] = useState('predefinido');
   const [selectedHallazgoDef, setSelectedHallazgoDef] = useState(null);
   const [freeText, setFreeText] = useState('');
+  const [tipoLibre, setTipoLibre] = useState(null);
+  const [editingHallazgo, setEditingHallazgo] = useState(null);
   const [acompanante, setAcompanante] = useState(null);
   const [firmaModalVisible, setFirmaModalVisible] = useState(false);
 
@@ -88,6 +91,7 @@ export function useAuditoria(idAud) {
               estado: n2.resultado_item?.estado ?? 'SIN_AUDITAR',
               hallazgos: (n2.hallazgos ?? []).map((h) => ({
                 ...h,
+                tipo: h.tipo ?? (n2.hallazgos_def ?? []).find((hd) => hd.id === h.id_hallazgo_def)?.tipo ?? null,
                 evidencias: (h.evidencias ?? []).map((ev) => ({ ...ev, uri: buildUri(ev.uri) })),
               })),
             });
@@ -255,6 +259,7 @@ export function useAuditoria(idAud) {
     setModalMode(hasDef ? 'predefinido' : 'libre');
     setSelectedHallazgoDef(null);
     setFreeText('');
+    setTipoLibre(null);
     setModalVisible(true);
   }, []);
 
@@ -263,6 +268,27 @@ export function useAuditoria(idAud) {
     setModalItem(null);
     setSelectedHallazgoDef(null);
     setFreeText('');
+    setTipoLibre(null);
+    setEditingHallazgo(null);
+  }, []);
+
+  const openEditModal = useCallback((item, hallazgo) => {
+    setEditingHallazgo({ uuid: hallazgo.uuid, idNivel2: item.id });
+    setModalItem(item);
+    setModalMode(hallazgo.id_hallazgo_def ? 'predefinido' : 'libre');
+    setSelectedHallazgoDef(
+      hallazgo.id_hallazgo_def
+        ? (item.hallazgos_def ?? []).find((hd) => hd.id === hallazgo.id_hallazgo_def) ?? null
+        : null
+    );
+    setFreeText(hallazgo.hallazgo_libre ?? '');
+    setTipoLibre(hallazgo.tipo_libre ?? null);
+    setModalVisible(true);
+  }, []);
+
+  const handleModalModeChange = useCallback((mode) => {
+    setModalMode(mode);
+    setTipoLibre(null);
   }, []);
 
   // ── Confirmar hallazgo
@@ -273,10 +299,49 @@ export function useAuditoria(idAud) {
 
     if (esPredefinido && !selectedHallazgoDef) return;
     if (!esPredefinido && !freeText.trim()) return;
+    if (!esPredefinido && !tipoLibre) return;
 
     const idHallazgoDef = esPredefinido ? selectedHallazgoDef.id : null;
     const hallazgoLibre = freeText.trim() || null;
+    const tipoLibreVal = esPredefinido ? null : tipoLibre;
     const descripcion = esPredefinido ? selectedHallazgoDef.descripcion : freeText.trim();
+
+    if (editingHallazgo) {
+      const { uuid: hallazgoUuid } = editingHallazgo;
+      setResultsMap((prev) => {
+        const n = new Map(prev);
+        const item = n.get(idNivel2);
+        if (!item) return prev;
+        n.set(idNivel2, {
+          ...item,
+          hallazgos: item.hallazgos.map((h) =>
+            h.uuid === hallazgoUuid
+              ? { ...h, hallazgo_libre: hallazgoLibre, tipo_libre: tipoLibreVal, tipo: esPredefinido ? (selectedHallazgoDef?.tipo ?? h.tipo) : h.tipo, descripcion }
+              : h
+          ),
+        });
+        return n;
+      });
+      if (!isOnlineRef.current) {
+        updateHallazgo(hallazgoUuid, hallazgoLibre, tipoLibreVal);
+        setPendingCount((c) => c + 1);
+      } else {
+        const itemUuid = resultsMapRef.current.get(idNivel2)?.uuid;
+        if (itemUuid) {
+          addHallazgo(idAud, itemUuid, {
+            uuid: hallazgoUuid,
+            id_hallazgo_def: idHallazgoDef,
+            hallazgo_libre: hallazgoLibre,
+            tipo_libre: tipoLibreVal,
+          }).catch((e) => {
+            setSnackbar('Error al editar hallazgo');
+            if (!isNetworkError(e)) logError('EjecutarAuditoria', 'handleEditHallazgo', e, isOnlineRef.current);
+          });
+        }
+      }
+      closeModal();
+      return;
+    }
 
     if (!isOnlineRef.current) {
       const item = resultsMapRef.current.get(idNivel2) ?? DEFAULT_RESULT;
@@ -288,10 +353,10 @@ export function useAuditoria(idAud) {
 
       const itemUuid = item.uuid ?? generateUUID();
       const hallazgoUuid = generateUUID();
-      const newHallazgo = { uuid: hallazgoUuid, id_hallazgo_def: idHallazgoDef, hallazgo_libre: hallazgoLibre, descripcion, evidencias: [] };
+      const newHallazgo = { uuid: hallazgoUuid, id_hallazgo_def: idHallazgoDef, hallazgo_libre: hallazgoLibre, tipo_libre: tipoLibreVal, tipo: esPredefinido ? selectedHallazgoDef.tipo : null, descripcion, evidencias: [] };
 
       saveResultadoItemRef(itemUuid, idAud, idNivel2, item.conforme, item.observaciones, item.estado);
-      saveHallazgo(hallazgoUuid, itemUuid, idHallazgoDef, hallazgoLibre);
+      saveHallazgo(hallazgoUuid, itemUuid, idHallazgoDef, hallazgoLibre, tipoLibreVal);
       setPendingCount((c) => c + 1);
 
       setResultsMap((prev) => {
@@ -315,8 +380,8 @@ export function useAuditoria(idAud) {
 
       const itemUuid = item.uuid ?? generateUUID();
       const hallazgoUuid = generateUUID();
-      const newHallazgo = { uuid: hallazgoUuid, id_hallazgo_def: idHallazgoDef, hallazgo_libre: hallazgoLibre, descripcion, evidencias: [] };
-      const body = { uuid: hallazgoUuid, id_hallazgo_def: idHallazgoDef, hallazgo_libre: hallazgoLibre };
+      const newHallazgo = { uuid: hallazgoUuid, id_hallazgo_def: idHallazgoDef, hallazgo_libre: hallazgoLibre, tipo_libre: tipoLibreVal, tipo: esPredefinido ? selectedHallazgoDef.tipo : null, descripcion, evidencias: [] };
+      const body = { uuid: hallazgoUuid, id_hallazgo_def: idHallazgoDef, hallazgo_libre: hallazgoLibre, tipo_libre: tipoLibreVal };
 
       const ensureItemBody = {
         uuid: itemUuid,
@@ -349,7 +414,7 @@ export function useAuditoria(idAud) {
       return n;
     });
     closeModal();
-  }, [modalItem, modalMode, selectedHallazgoDef, freeText, idAud, closeModal]);
+  }, [modalItem, modalMode, selectedHallazgoDef, freeText, tipoLibre, editingHallazgo, idAud, closeModal]);
 
   // ── Agregar evidencia
   const handleAddEvidencia = useCallback(async (idNivel2, hallazgoUuid, tipo) => {
@@ -559,10 +624,15 @@ export function useAuditoria(idAud) {
     modalItem,
     modalMode,
     setModalMode,
+    handleModalModeChange,
+    editingHallazgo,
+    openEditModal,
     selectedHallazgoDef,
     setSelectedHallazgoDef,
     freeText,
     setFreeText,
+    tipoLibre,
+    setTipoLibre,
     handleConformeChange,
     handleObsBlur,
     openModal,

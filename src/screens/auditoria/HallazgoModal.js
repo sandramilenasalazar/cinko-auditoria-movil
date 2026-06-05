@@ -22,6 +22,9 @@ export function HallazgoModal({
   onSelectHallazgoDef,
   freeText,
   onFreeTextChange,
+  tipoLibre,
+  onTipoLibreChange,
+  isEditing,
   resultsMap,
   onConfirm,
   kbHeight,
@@ -41,13 +44,13 @@ export function HallazgoModal({
       >
         {/* Header fijo */}
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Agregar hallazgo</Text>
+          <Text style={styles.modalTitle}>{isEditing ? 'Editar hallazgo' : 'Agregar hallazgo'}</Text>
           {item && (
             <Text style={styles.modalSubtitle} numberOfLines={2}>
               {item.descripcion}
             </Text>
           )}
-          {hallazgosDef.length > 0 && (
+          {hallazgosDef.length > 0 && !isEditing && (
             <View style={styles.modeTabs}>
               <TouchableOpacity
                 style={[styles.modeTab, mode === 'predefinido' && styles.modeTabActive]}
@@ -128,13 +131,32 @@ export function HallazgoModal({
 
           {mode === 'libre' && (
             <>
+              <Text style={styles.modalSectionLabel}>Tipo de hallazgo</Text>
+              <View style={styles.tipoLibreTabs}>
+                <TouchableOpacity
+                  style={[styles.tipoLibreTab, tipoLibre === 'NORMA' && styles.tipoLibreTabActive]}
+                  onPress={() => onTipoLibreChange('NORMA')}
+                >
+                  <Text style={[styles.tipoLibreTabText, tipoLibre === 'NORMA' && styles.tipoLibreTabTextActive]}>
+                    NORMA
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tipoLibreTab, tipoLibre === 'MANTENIMIENTO' && styles.tipoLibreTabActive]}
+                  onPress={() => onTipoLibreChange('MANTENIMIENTO')}
+                >
+                  <Text style={[styles.tipoLibreTabText, tipoLibre === 'MANTENIMIENTO' && styles.tipoLibreTabTextActive]}>
+                    MANTENIMIENTO
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.modalSectionLabel}>Describe el hallazgo</Text>
               <TextInput
                 value={freeText}
                 onChangeText={onFreeTextChange}
                 mode="outlined"
                 multiline
-                numberOfLines={6}
+                numberOfLines={8}
                 placeholder="Escribe el hallazgo..."
                 outlineColor={COLORS.border}
                 activeOutlineColor={COLORS.primary}
@@ -153,10 +175,10 @@ export function HallazgoModal({
           <Button
             mode="contained"
             onPress={onConfirm}
-            disabled={mode === 'predefinido' ? !selectedHallazgoDef : !freeText.trim()}
+            disabled={mode === 'predefinido' ? !selectedHallazgoDef : (!freeText.trim() || !tipoLibre)}
             buttonColor={COLORS.primary}
           >
-            Agregar
+            Guardar
           </Button>
         </View>
       </Modal>
@@ -197,7 +219,7 @@ const styles = StyleSheet.create({
   hallazgoDefTextDisabled: { color: COLORS.gray },
   yaAgregadoText: { color: COLORS.si, fontWeight: '700', fontSize: 14 },
   seleccionadoText: { color: COLORS.primary, fontWeight: '700', fontSize: 16 },
-  freeTextInput: { backgroundColor: COLORS.white, marginBottom: 12, minHeight: 130 },
+  freeTextInput: { backgroundColor: COLORS.white, marginBottom: 12, minHeight: 180 },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -220,4 +242,16 @@ const styles = StyleSheet.create({
   modeTabText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
   modeTabTextActive: { color: COLORS.white },
   sinHallazgosDef: { color: COLORS.gray, fontStyle: 'italic', fontSize: 13, marginVertical: 8 },
+  tipoLibreTabs: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  tipoLibreTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: COLORS.white },
+  tipoLibreTabActive: { backgroundColor: COLORS.primary },
+  tipoLibreTabText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
+  tipoLibreTabTextActive: { color: COLORS.white },
 });

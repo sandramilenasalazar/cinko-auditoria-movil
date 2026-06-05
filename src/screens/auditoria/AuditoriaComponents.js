@@ -7,6 +7,9 @@ import {
   ActivityIndicator,
   TextInput,
   IconButton,
+  Chip,
+  Menu,
+  Divider,
 } from 'react-native-paper';
 import { API_BASE_URL } from '../../api/config';
 
@@ -97,7 +100,10 @@ export function EvidenciaItem({ evidencia, onDelete, authToken }) {
 }
 
 // ─── HallazgoItem ─────────────────────────────────────────────────────────────
-export function HallazgoItem({ hallazgo, onDelete, onAddEvidencia, onDeleteEvidencia, authToken }) {
+export function HallazgoItem({ hallazgo, onDelete, onEdit, onAddEvidencia, onDeleteEvidencia, authToken }) {
+  const [menuVisible, setMenuVisible] = useState(false);
+  const closeMenu = () => setMenuVisible(false);
+
   const texto = hallazgo.id_hallazgo_def
     ? hallazgo.hallazgo_libre
       ? `${hallazgo.descripcion}: ${hallazgo.hallazgo_libre}`
@@ -106,9 +112,36 @@ export function HallazgoItem({ hallazgo, onDelete, onAddEvidencia, onDeleteEvide
 
   return (
     <View style={styles.hallazgoCard}>
+      <View style={styles.hallazgoHeader}>
+        {(hallazgo.tipo_libre || hallazgo.tipo) ? (
+          <Chip compact style={styles.tipoLibreChip} textStyle={styles.tipoLibreChipText}>
+            {hallazgo.tipo_libre ?? hallazgo.tipo}
+          </Chip>
+        ) : <View style={styles.hallazgoHeaderSpacer} />}
+        <Menu
+          visible={menuVisible}
+          onDismiss={closeMenu}
+          anchor={
+            <IconButton
+              icon="dots-vertical"
+              size={18}
+              iconColor={COLORS.gray}
+              style={styles.menuIcon}
+              onPress={() => setMenuVisible(true)}
+            />
+          }
+        >
+          <Menu.Item leadingIcon="camera" title="Cámara" onPress={() => { onAddEvidencia('camera'); closeMenu(); }} />
+          <Menu.Item leadingIcon="image-outline" title="Galería" onPress={() => { onAddEvidencia('gallery'); closeMenu(); }} />
+          <Menu.Item leadingIcon="paperclip" title="Adjuntar documento" onPress={() => { onAddEvidencia('document'); closeMenu(); }} />
+          <Divider />
+          <Menu.Item leadingIcon="pencil-outline" title="Editar" onPress={() => { onEdit(); closeMenu(); }} />
+          <Menu.Item leadingIcon="delete-outline" title="Eliminar" titleStyle={{ color: COLORS.no }} onPress={() => { onDelete(); closeMenu(); }} />
+        </Menu>
+      </View>
+
       <View style={styles.hallazgoRow}>
         <Text style={styles.hallazgoText} numberOfLines={3}>{texto}</Text>
-        <IconButton icon="close" size={16} iconColor={COLORS.no} style={styles.hallazgoDelete} onPress={onDelete} />
       </View>
 
       {hallazgo.evidencias?.length > 0 && (
@@ -123,21 +156,6 @@ export function HallazgoItem({ hallazgo, onDelete, onAddEvidencia, onDeleteEvide
           ))}
         </View>
       )}
-
-      <View style={styles.adjuntarRow}>
-        <TouchableOpacity style={styles.adjuntarBtn} onPress={() => onAddEvidencia('camera')}>
-          <IconButton icon="camera" size={18} iconColor={COLORS.primary} style={styles.adjuntarIcon} />
-          <Text style={styles.adjuntarText}>Cámara</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.adjuntarBtn} onPress={() => onAddEvidencia('gallery')}>
-          <IconButton icon="image-outline" size={18} iconColor={COLORS.primary} style={styles.adjuntarIcon} />
-          <Text style={styles.adjuntarText}>Galería</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.adjuntarBtn} onPress={() => onAddEvidencia('document')}>
-          <IconButton icon="paperclip" size={18} iconColor={COLORS.primary} style={styles.adjuntarIcon} />
-          <Text style={styles.adjuntarText}>Documento</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -151,6 +169,7 @@ export const Nivel2Item = memo(function Nivel2Item({
   onObsBlur,
   onAddHallazgo,
   onDeleteHallazgo,
+  onEditHallazgo,
   onAddEvidencia,
   authToken,
   onDeleteEvidencia,
@@ -198,6 +217,7 @@ export const Nivel2Item = memo(function Nivel2Item({
                 hallazgo={h}
                 authToken={authToken}
                 onDelete={() => onDeleteHallazgo(h.uuid)}
+                onEdit={() => onEditHallazgo(h)}
                 onAddEvidencia={(tipo) => onAddEvidencia(h.uuid, tipo)}
                 onDeleteEvidencia={(evUuid) => onDeleteEvidencia(h.uuid, evUuid)}
               />
@@ -316,6 +336,11 @@ const styles = StyleSheet.create({
   evidenciaDeleteText: { color: COLORS.white, fontSize: 9, fontWeight: '700' },
 
   // HallazgoItem
+  tipoLibreChip: { backgroundColor: '#FFF3E0', alignSelf: 'flex-start' },
+  tipoLibreChipText: { fontSize: 10, color: '#E65100' },
+  hallazgoHeader: { flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingRight: 2, paddingTop: 4 },
+  hallazgoHeaderSpacer: { flex: 1 },
+  menuIcon: { margin: 0, padding: 0 },
   hallazgoCard: {
     backgroundColor: '#FFFDE7',
     borderRadius: 8,

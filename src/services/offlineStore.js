@@ -24,13 +24,24 @@ export function saveResultadoItemRef(uuid, idAudProyecto, idNivel2, conforme, ob
   } catch (_) {}
 }
 
-export function saveHallazgo(uuid, itemUuid, idHallazgoDef, hallazgoLibre) {
+export function saveHallazgo(uuid, itemUuid, idHallazgoDef, hallazgoLibre, tipoLibre) {
   try {
     getDatabase().runSync(
       `INSERT OR IGNORE INTO aud_resultado_hallazgo
-         (uuid, id_resultado_item_uuid, id_hallazgo_def, hallazgo_libre, pending_sync)
-       VALUES (?, ?, ?, ?, 1)`,
-      [uuid, itemUuid, idHallazgoDef ?? null, hallazgoLibre ?? null]
+         (uuid, id_resultado_item_uuid, id_hallazgo_def, hallazgo_libre, tipo_libre, pending_sync)
+       VALUES (?, ?, ?, ?, ?, 1)`,
+      [uuid, itemUuid, idHallazgoDef ?? null, hallazgoLibre ?? null, tipoLibre ?? null]
+    );
+  } catch (_) {}
+}
+
+export function updateHallazgo(uuid, hallazgoLibre, tipoLibre) {
+  try {
+    getDatabase().runSync(
+      `UPDATE aud_resultado_hallazgo
+       SET hallazgo_libre = ?, tipo_libre = ?, pending_sync = 1
+       WHERE uuid = ?`,
+      [hallazgoLibre ?? null, tipoLibre ?? null, uuid]
     );
   } catch (_) {}
 }
