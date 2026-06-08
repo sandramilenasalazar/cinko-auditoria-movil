@@ -486,8 +486,9 @@ export function useAuditoria(idAud) {
         return n;
       });
     } catch (e) {
-      setSnackbar('Error al subir evidencia');
-      if (!isNetworkError(e)) logError('EjecutarAuditoria', 'handleAddEvidencia', e, isOnlineRef.current);
+      const msg = __DEV__ ? `Error al subir: ${e?.message ?? e}` : 'Error al subir evidencia';
+      setSnackbar(msg);
+      logError('EjecutarAuditoria', 'handleAddEvidencia', e, isOnlineRef.current);
       setResultsMap((prev) => {
         const n = new Map(prev);
         const item = n.get(idNivel2);
