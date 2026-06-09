@@ -47,6 +47,10 @@ function ProyectoCard({ proyecto, onPress }) {
           </Chip>
         </View>
 
+        {proyecto.obra && (
+          <Text style={styles.obraSubtitle}>{proyecto.obra}</Text>
+        )}
+
         {proyecto.no_contrato && (
           <Text style={styles.contrato}>Contrato: {proyecto.no_contrato}</Text>
         )}
@@ -218,6 +222,7 @@ const styles = StyleSheet.create({
   },
   chipEnProceso: { backgroundColor: '#FFF3E0' },
   chipText: { color: '#E65100', fontSize: 10, fontWeight: '700' },
+  obraSubtitle: { color: COLORS.gray, fontSize: 12, fontStyle: 'italic', marginBottom: 2 },
   contrato: { color: COLORS.gray, fontSize: 12, marginBottom: 4 },
   divider: { marginVertical: 8, backgroundColor: COLORS.border },
   fechasRow: { flexDirection: 'row', gap: 16 },

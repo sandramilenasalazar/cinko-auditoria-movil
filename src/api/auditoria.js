@@ -35,3 +35,7 @@ export const upsertAcompanante = (idAudProyecto, body) =>
 // Consulta el acompañante existente (404 si aún no hay)
 export const getAcompanante = (idAudProyecto) =>
   apiRequest(`/auditoria/${idAudProyecto}/acompanante`);
+
+// Carga datos del paquete: proyecto y máquinas asociadas
+export const getAuditoriaPaquete = (idAudProyecto) =>
+  apiRequest(`/auditoria/${idAudProyecto}/paquete`);

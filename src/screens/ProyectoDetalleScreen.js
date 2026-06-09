@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
-import { Text, Card, Chip, Divider, ActivityIndicator, Button } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, ToastAndroid } from 'react-native';
+import { Text, Card, Chip, Divider, ActivityIndicator, Button, IconButton } from 'react-native-paper';
+import * as Clipboard from 'expo-clipboard';
 import { getAudProyecto } from '../api/proyectos';
+import { getAuditoriaPaquete } from '../api/auditoria';
 import { logError } from '../services/errorLogger';
 
 const COLORS = {
@@ -49,12 +51,17 @@ function Campo({ label, value }) {
 export default function ProyectoDetalleScreen({ route, navigation }) {
   const { proyecto } = route.params;
   const [audProyecto, setAudProyecto] = useState(null);
+  const [paquete, setPaquete] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getAudProyecto(proyecto.id_proyecto ?? proyecto.id)
-      .then(setAudProyecto)
-      .catch((e) => { setAudProyecto(null); logError('ProyectoDetalle', 'loadAudProyecto', e, true); })
+      .then((data) => {
+        setAudProyecto(data);
+        return getAuditoriaPaquete(data.id);
+      })
+      .then(setPaquete)
+      .catch((e) => { logError('ProyectoDetalle', 'loadAudProyecto', e, true); })
       .finally(() => setLoading(false));
   }, [proyecto]);
 
@@ -73,7 +80,30 @@ export default function ProyectoDetalleScreen({ route, navigation }) {
       {/* Datos generales */}
       <Seccion titulo="Datos generales">
         <Campo label="Contrato" value={proyecto.no_contrato} />
-        <Campo label="Objeto" value={proyecto.objeto} />
+        {proyecto.direccion_copropiedad && (
+          <View style={styles.campo}>
+            <Text style={styles.campoLabel}>Dirección</Text>
+            <View style={styles.direccionRow}>
+              <Text style={[styles.campoValue, styles.direccionTexto]}>
+                {proyecto.direccion_copropiedad}
+              </Text>
+              <IconButton
+                icon="content-copy"
+                size={16}
+                iconColor={COLORS.gray}
+                style={styles.copyBtn}
+                onPress={async () => {
+                  await Clipboard.setStringAsync(proyecto.direccion_copropiedad);
+                  ToastAndroid.show('Dirección copiada', ToastAndroid.SHORT);
+                }}
+              />
+            </View>
+          </View>
+        )}
+        <Campo label="Obra" value={paquete?.proyecto?.obra ?? proyecto.obra} />
+        <Campo label="Objeto" value={paquete?.proyecto?.objeto ?? proyecto.objeto} />
+        <Campo label="Características técnicas" value={paquete?.proyecto?.caracteristicas_tecnicas ?? proyecto.caracteristicas_tecnicas} />
+        <Campo label="Recomendaciones pendientes" value={paquete?.proyecto?.recomendaciones_pendientes ?? proyecto.recomendaciones_pendientes} />
         <Campo label="Valor inicial" value={formatMoneda(proyecto.valor_inicial)} />
         <Campo
           label="Días interventoría"
@@ -92,17 +122,26 @@ export default function ProyectoDetalleScreen({ route, navigation }) {
         <Campo label="Fin real" value={formatFecha(proyecto.fecha_fin_real)} />
       </Seccion>
 
-      {/* Características técnicas */}
-      {proyecto.caracteristicas_tecnicas && (
-        <Seccion titulo="Características técnicas">
-          <Text style={styles.textoLargo}>{proyecto.caracteristicas_tecnicas}</Text>
-        </Seccion>
-      )}
-
-      {/* Recomendaciones pendientes */}
-      {proyecto.recomendaciones_pendientes && (
-        <Seccion titulo="Recomendaciones pendientes">
-          <Text style={styles.textoLargo}>{proyecto.recomendaciones_pendientes}</Text>
+      {/* Máquinas */}
+      {paquete?.maquinas?.length > 0 && (
+        <Seccion titulo="Máquinas">
+          {paquete.maquinas.map((m, idx) => (
+            <View key={m.id_maquina}>
+              {idx > 0 && <Divider style={styles.maquinaDivider} />}
+              <Text style={styles.maquinaNombre}>{m.nombre}</Text>
+              <Campo label="Tipo" value={m.tipo} />
+              <Campo label="Marcas" value={m.marcas?.join(', ')} />
+              <Campo label="Empresa de mantenimiento" value={m.empresa_mantenimiento} />
+              <Campo label="Capacidad" value={m.capacidad != null ? `${m.capacidad} personas` : null} />
+              <Campo label="Velocidad" value={m.velocidad != null ? `${m.velocidad} m/s` : null} />
+              <Campo label="Paradas" value={m.paradas != null ? String(m.paradas) : null} />
+              <Campo label="Entradas" value={m.entradas != null ? String(m.entradas) : null} />
+              <Campo label="Suspensión" value={m.suspension} />
+              <Campo label="Maniobra" value={m.maniobra} />
+              <Campo label="Control de movimiento" value={m.tipo_control_movimiento} />
+              <Campo label="País" value={m.pais} />
+            </View>
+          ))}
         </Seccion>
       )}
 
@@ -180,4 +219,9 @@ const styles = StyleSheet.create({
   textoLargo: { color: '#333', lineHeight: 20, fontSize: 14 },
   sinDatos: { color: '#999', fontStyle: 'italic', fontSize: 13 },
   ejecutarBtn: { marginTop: 14, borderRadius: 8 },
+  maquinaNombre: { fontWeight: '700', fontSize: 14, color: COLORS.navy, marginBottom: 8, marginTop: 4 },
+  maquinaDivider: { marginVertical: 12, backgroundColor: COLORS.border },
+  direccionRow: { flexDirection: 'row', alignItems: 'center' },
+  direccionTexto: { flex: 1 },
+  copyBtn: { margin: 0, marginLeft: 4 },
 });
