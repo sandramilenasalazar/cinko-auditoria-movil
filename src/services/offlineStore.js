@@ -102,6 +102,115 @@ export function saveEvidencia(uuid, hallazgoUuid, tipo, fileLocalPath, nombre) {
   } catch (_) {}
 }
 
+// Quita de la copia local un hallazgo que ya no existe en el servidor
+// (p. ej. eliminado desde la web) junto con sus evidencias pendientes.
+// SQLite local no tiene foreign_keys activo, así que se borran explícitamente.
+// Devuelve las rutas de archivos locales que quedaron sin uso.
+export function eliminarHallazgoLocal(uuid) {
+  try {
+    const db = getDatabase();
+    const archivos = db
+      .getAllSync(
+        `SELECT file_local_path FROM aud_hallazgo_evidencia
+         WHERE id_resultado_hallazgo_uuid = ? AND file_local_path IS NOT NULL`,
+        [uuid]
+      )
+      .map((r) => r.file_local_path);
+    db.runSync(`DELETE FROM aud_hallazgo_evidencia WHERE id_resultado_hallazgo_uuid = ?`, [uuid]);
+    db.runSync(`DELETE FROM aud_resultado_hallazgo WHERE uuid = ?`, [uuid]);
+    return archivos;
+  } catch (_) {
+    return [];
+  }
+}
+
+// ── Reintentos de subida de evidencias ────────────────────────────────────────
+export const MAX_INTENTOS_EVIDENCIA = 6;
+const BACKOFF_BASE_MS = 60 * 1000;      // 1 min
+const BACKOFF_MAX_MS = 30 * 60 * 1000;  // 30 min
+
+// Registra un intento fallido: suma 1, guarda el error y calcula la espera
+// creciente (1, 2, 4, 8, 16, 30 min) antes del próximo intento.
+export function marcarEvidenciaFallida(uuid, mensaje) {
+  try {
+    const db = getDatabase();
+    const row = db.getFirstSync(
+      `SELECT intentos FROM aud_hallazgo_evidencia WHERE uuid = ?`,
+      [uuid]
+    );
+    const intentos = (row?.intentos ?? 0) + 1;
+    const espera = Math.min(BACKOFF_BASE_MS * 2 ** (intentos - 1), BACKOFF_MAX_MS);
+    db.runSync(
+      `UPDATE aud_hallazgo_evidencia
+       SET intentos = ?, proximo_intento = ?, ultimo_error = ?, pending_sync = 1
+       WHERE uuid = ?`,
+      [intentos, new Date(Date.now() + espera).toISOString(), mensaje ?? null, uuid]
+    );
+  } catch (_) {}
+}
+
+// Marca una evidencia como imposible de recuperar (archivo local perdido o vacío).
+// Queda pendiente y visible con el error, pero no se vuelve a intentar sola.
+export function marcarEvidenciaIrrecuperable(uuid, mensaje) {
+  try {
+    getDatabase().runSync(
+      `UPDATE aud_hallazgo_evidencia
+       SET intentos = ?, proximo_intento = NULL, ultimo_error = ?, pending_sync = 1
+       WHERE uuid = ?`,
+      [MAX_INTENTOS_EVIDENCIA, mensaje ?? null, uuid]
+    );
+  } catch (_) {}
+}
+
+export function marcarEvidenciaSubida(uuid) {
+  try {
+    getDatabase().runSync(
+      `UPDATE aud_hallazgo_evidencia
+       SET pending_sync = 0, file_local_path = NULL, intentos = 0,
+           proximo_intento = NULL, ultimo_error = NULL
+       WHERE uuid = ?`,
+      [uuid]
+    );
+  } catch (_) {}
+}
+
+export function descartarEvidencia(uuid) {
+  try {
+    getDatabase().runSync(`DELETE FROM aud_hallazgo_evidencia WHERE uuid = ?`, [uuid]);
+  } catch (_) {}
+}
+
+// Evidencias de la auditoría que aún no están en el servidor (para mostrarlas
+// como pendientes al recargar la pantalla).
+export function getEvidenciasPendientes(idAudProyecto) {
+  try {
+    return getDatabase().getAllSync(
+      `SELECT ev.uuid, ev.id_resultado_hallazgo_uuid, ev.tipo, ev.file_local_path,
+              ev.descripcion, ev.intentos, ev.ultimo_error
+       FROM aud_hallazgo_evidencia ev
+       JOIN aud_resultado_hallazgo h ON h.uuid = ev.id_resultado_hallazgo_uuid
+       JOIN aud_resultado_item i ON i.uuid = h.id_resultado_item_uuid
+       WHERE i.id_aud_proyecto = ? AND ev.pending_sync = 1 AND ev.deleted_at IS NULL`,
+      [idAudProyecto]
+    );
+  } catch (_) {
+    return [];
+  }
+}
+
+// Todas las rutas de archivo que la cola local todavía necesita (de cualquier auditoría).
+export function getRutasEvidenciasEnCola() {
+  try {
+    return new Set(
+      getDatabase()
+        .getAllSync(`SELECT file_local_path FROM aud_hallazgo_evidencia WHERE file_local_path IS NOT NULL`)
+        .map((r) => r.file_local_path)
+    );
+  } catch (_) {
+    return null; // si no se pudo leer la cola, no se limpia nada
+  }
+}
+
 export function deleteEvidenciaOffline(uuid, hallazgoUuid, itemUuid, idAudProyecto, idNivel2) {
   try {
     const db = getDatabase();

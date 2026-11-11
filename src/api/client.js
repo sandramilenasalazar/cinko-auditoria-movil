@@ -13,7 +13,7 @@ const fetchWithTimeout = (url, options) => {
     .finally(() => clearTimeout(id));
 };
 
-const refreshAccessToken = async () => {
+export const refreshAccessToken = async () => {
   const refreshToken = await getToken('refresh_token');
   const res = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
@@ -47,7 +47,9 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || body.error || `Error ${res.status}`);
+    const err = new Error(body.error || body.message || `Error ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
 
   return res.json();

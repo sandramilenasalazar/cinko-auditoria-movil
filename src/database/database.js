@@ -193,4 +193,15 @@ export const initDatabase = () => {
   try {
     database.execSync(`ALTER TABLE aud_resultado_hallazgo ADD COLUMN tipo_libre TEXT`);
   } catch (_) {}
+
+  // Migración (solo BD local): control de reintentos de subida de evidencias
+  for (const col of [
+    'intentos INTEGER DEFAULT 0',
+    'proximo_intento TEXT',
+    'ultimo_error TEXT',
+  ]) {
+    try {
+      database.execSync(`ALTER TABLE aud_hallazgo_evidencia ADD COLUMN ${col}`);
+    } catch (_) {}
+  }
 };

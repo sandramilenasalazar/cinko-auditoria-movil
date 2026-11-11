@@ -10,7 +10,7 @@ import {
   TouchableRipple,
   Chip,
 } from 'react-native-paper';
-import { COLORS } from './AuditoriaComponents';
+import { COLORS, tipoLabel } from './AuditoriaComponents';
 
 export function HallazgoModal({
   visible,
@@ -99,11 +99,16 @@ export function HallazgoModal({
                     >
                       <View style={styles.hallazgoDefContent}>
                         <Chip compact style={styles.tipoChip} textStyle={styles.tipoChipText}>
-                          {hd.tipo}
+                          {tipoLabel(hd.tipo)}
                         </Chip>
-                        <Text style={[styles.hallazgoDefText, yaAgregado && styles.hallazgoDefTextDisabled]}>
-                          {hd.descripcion}
-                        </Text>
+                        <View style={styles.hallazgoDefTextWrap}>
+                          <Text style={[styles.hallazgoDefText, yaAgregado && styles.hallazgoDefTextDisabled]}>
+                            {hd.descripcion}
+                          </Text>
+                          {hd.suma_hallazgo === false && (
+                            <Text style={styles.noSumaText}>✓ No suma como hallazgo</Text>
+                          )}
+                        </View>
                         {yaAgregado
                           ? <Text style={styles.yaAgregadoText}>✓</Text>
                           : seleccionado && <Text style={styles.seleccionadoText}>●</Text>
@@ -131,25 +136,27 @@ export function HallazgoModal({
 
           {mode === 'libre' && (
             <>
-              <Text style={styles.modalSectionLabel}>Tipo de hallazgo</Text>
+              <Text style={styles.modalSectionLabel}>Tipo de hallazgo (obligatorio)</Text>
               <View style={styles.tipoLibreTabs}>
-                <TouchableOpacity
-                  style={[styles.tipoLibreTab, tipoLibre === 'NORMA' && styles.tipoLibreTabActive]}
-                  onPress={() => onTipoLibreChange('NORMA')}
-                >
-                  <Text style={[styles.tipoLibreTabText, tipoLibre === 'NORMA' && styles.tipoLibreTabTextActive]}>
-                    NORMA
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.tipoLibreTab, tipoLibre === 'MANTENIMIENTO' && styles.tipoLibreTabActive]}
-                  onPress={() => onTipoLibreChange('MANTENIMIENTO')}
-                >
-                  <Text style={[styles.tipoLibreTabText, tipoLibre === 'MANTENIMIENTO' && styles.tipoLibreTabTextActive]}>
-                    MANTENIMIENTO
-                  </Text>
-                </TouchableOpacity>
+                {['MANTENIMIENTO', 'NORMA'].map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.tipoLibreTab, tipoLibre === t && styles.tipoLibreTabActive]}
+                    onPress={() => onTipoLibreChange(t)}
+                  >
+                    <Text style={[styles.tipoLibreTabText, tipoLibre === t && styles.tipoLibreTabTextActive]}>
+                      {tipoLabel(t)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
+              {!tipoLibre && (
+                <Text style={styles.tipoRequeridoText}>
+                  {isEditing
+                    ? '⚠ Este hallazgo no tiene tipo. Elige Mantenimiento o Norma para guardarlo.'
+                    : 'Elige Mantenimiento o Norma para poder guardar.'}
+                </Text>
+              )}
               <Text style={styles.modalSectionLabel}>Describe el hallazgo</Text>
               <TextInput
                 value={freeText}
@@ -215,7 +222,7 @@ const styles = StyleSheet.create({
   hallazgoDefContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   tipoChip: { backgroundColor: '#E3F2FD' },
   tipoChipText: { fontSize: 10, color: COLORS.primary },
-  hallazgoDefText: { flex: 1, fontSize: 13, color: COLORS.navy },
+  hallazgoDefText: { fontSize: 13, color: COLORS.navy },
   hallazgoDefTextDisabled: { color: COLORS.gray },
   yaAgregadoText: { color: COLORS.si, fontWeight: '700', fontSize: 14 },
   seleccionadoText: { color: COLORS.primary, fontWeight: '700', fontSize: 16 },
@@ -242,6 +249,9 @@ const styles = StyleSheet.create({
   modeTabText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
   modeTabTextActive: { color: COLORS.white },
   sinHallazgosDef: { color: COLORS.gray, fontStyle: 'italic', fontSize: 13, marginVertical: 8 },
+  hallazgoDefTextWrap: { flex: 1 },
+  noSumaText: { fontSize: 11, color: COLORS.si, marginTop: 2 },
+  tipoRequeridoText: { fontSize: 12, color: COLORS.no, marginTop: -8, marginBottom: 12 },
   tipoLibreTabs: {
     flexDirection: 'row',
     marginBottom: 16,

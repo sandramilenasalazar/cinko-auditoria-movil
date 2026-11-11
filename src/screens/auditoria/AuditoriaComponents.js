@@ -50,6 +50,13 @@ export const buildUri = (uri) =>
 export const isValidUri = (uri) =>
   typeof uri === 'string' && uri.length > 0 && /^(https?|file):\/\//i.test(uri);
 
+// Etiquetas visibles para el tipo de hallazgo
+export const TIPO_LABEL = {
+  MANTENIMIENTO: '🔧 Mantenimiento',
+  NORMA: '📜 Norma',
+};
+export const tipoLabel = (tipo) => TIPO_LABEL[tipo] ?? tipo;
+
 // ─── ConformeToggle ──────────────────────────────────────────────────────────
 export function ConformeToggle({ value, onChange, disabled }) {
   return (
@@ -74,6 +81,8 @@ export function ConformeToggle({ value, onChange, disabled }) {
 
 // ─── EvidenciaItem ────────────────────────────────────────────────────────────
 export function EvidenciaItem({ evidencia, onDelete, authToken }) {
+  // Si la descarga falla (p. ej. 404 del servidor) se muestra un marcador; no se reintenta.
+  const [noDisponible, setNoDisponible] = useState(false);
   const builtUri = evidencia.tipo === 'IMAGEN' ? buildUri(evidencia.uri) : null;
   const validUri = isValidUri(builtUri) ? builtUri : null;
   const source = validUri
@@ -82,14 +91,28 @@ export function EvidenciaItem({ evidencia, onDelete, authToken }) {
 
   return (
     <View style={styles.evidenciaItem}>
-      {evidencia.tipo === 'IMAGEN' && source ? (
-        <Image source={source} style={styles.evidenciaThumb} />
+      {evidencia.tipo === 'IMAGEN' && source && noDisponible ? (
+        <View style={[styles.evidenciaThumb, styles.evidenciaNoDisponible]}>
+          <Text style={styles.evidenciaNoDisponibleText}>⚠</Text>
+          <Text style={styles.evidenciaNoDisponibleText}>No disponible</Text>
+        </View>
+      ) : evidencia.tipo === 'IMAGEN' && source ? (
+        <Image
+          source={validUri.startsWith('file://') ? { uri: validUri } : source}
+          style={[styles.evidenciaThumb, evidencia.pendiente && styles.evidenciaThumbPendiente]}
+          onError={() => setNoDisponible(true)}
+        />
       ) : evidencia.tipo === 'IMAGEN' ? (
         <View style={[styles.evidenciaThumb, { backgroundColor: COLORS.border }]} />
       ) : (
         <View style={styles.evidenciaDoc}>
           <IconButton icon="file-document-outline" size={20} iconColor={COLORS.primary} style={styles.evidenciaDocIcon} />
           <Text style={styles.evidenciaDocNombre} numberOfLines={1}>{evidencia.nombre}</Text>
+        </View>
+      )}
+      {evidencia.pendiente && (
+        <View style={[styles.evidenciaBadge, evidencia.error && styles.evidenciaBadgeError]}>
+          <Text style={styles.evidenciaBadgeText}>{evidencia.error ? '⚠' : '⏳'}</Text>
         </View>
       )}
       <TouchableOpacity style={styles.evidenciaDeleteBtn} onPress={onDelete}>
@@ -109,15 +132,34 @@ export function HallazgoItem({ hallazgo, onDelete, onEdit, onAddEvidencia, onDel
       ? `${hallazgo.descripcion}: ${hallazgo.hallazgo_libre}`
       : hallazgo.descripcion
     : hallazgo.hallazgo_libre;
+  const esLibre = !hallazgo.id_hallazgo_def;
+  const tipoVisible = esLibre ? hallazgo.tipo_libre : hallazgo.tipo;
+  const fotosConError = (hallazgo.evidencias ?? []).filter((e) => e.pendiente && e.error);
 
   return (
     <View style={styles.hallazgoCard}>
       <View style={styles.hallazgoHeader}>
-        {(hallazgo.tipo_libre || hallazgo.tipo) ? (
-          <Chip compact style={styles.tipoLibreChip} textStyle={styles.tipoLibreChipText}>
-            {hallazgo.tipo_libre ?? hallazgo.tipo}
-          </Chip>
-        ) : <View style={styles.hallazgoHeaderSpacer} />}
+        <View style={styles.hallazgoChips}>
+          {esLibre && !hallazgo.tipo_libre ? (
+            <Chip
+              compact
+              style={styles.sinTipoChip}
+              textStyle={styles.sinTipoChipText}
+              onPress={onEdit}
+            >
+              ⚠ Sin tipo — toca para elegir
+            </Chip>
+          ) : tipoVisible ? (
+            <Chip compact style={styles.tipoLibreChip} textStyle={styles.tipoLibreChipText}>
+              {tipoLabel(tipoVisible)}
+            </Chip>
+          ) : null}
+          {hallazgo.suma_hallazgo === false && (
+            <Chip compact style={styles.noSumaChip} textStyle={styles.noSumaChipText}>
+              ✓ No suma como hallazgo
+            </Chip>
+          )}
+        </View>
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
@@ -143,6 +185,12 @@ export function HallazgoItem({ hallazgo, onDelete, onEdit, onAddEvidencia, onDel
       <View style={styles.hallazgoRow}>
         <Text style={styles.hallazgoText} numberOfLines={3}>{texto}</Text>
       </View>
+
+      {fotosConError.length > 0 && (
+        <Text style={styles.evidenciaErrorText}>
+          ⚠ {fotosConError.length === 1 ? 'Una foto no se pudo subir' : `${fotosConError.length} fotos no se pudieron subir`}: {fotosConError[0].error}
+        </Text>
+      )}
 
       {hallazgo.evidencias?.length > 0 && (
         <View style={styles.evidenciasWrap}>
@@ -337,6 +385,21 @@ const styles = StyleSheet.create({
 
   // HallazgoItem
   tipoLibreChip: { backgroundColor: '#FFF3E0', alignSelf: 'flex-start' },
+  hallazgoChips: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  sinTipoChip: { backgroundColor: '#FFEBEE', alignSelf: 'flex-start' },
+  sinTipoChipText: { fontSize: 10, color: COLORS.no, fontWeight: '700' },
+  noSumaChip: { backgroundColor: '#E8F5E9', alignSelf: 'flex-start' },
+  noSumaChipText: { fontSize: 10, color: COLORS.si },
+  evidenciaThumbPendiente: { opacity: 0.6 },
+  evidenciaNoDisponible: { alignItems: 'center', justifyContent: 'center' },
+  evidenciaNoDisponibleText: { fontSize: 9, color: COLORS.gray, textAlign: 'center' },
+  evidenciaBadge: {
+    position: 'absolute', left: 2, bottom: 2, backgroundColor: '#FFF8E1',
+    borderRadius: 8, paddingHorizontal: 3,
+  },
+  evidenciaBadgeError: { backgroundColor: '#FFEBEE' },
+  evidenciaBadgeText: { fontSize: 10 },
+  evidenciaErrorText: { fontSize: 11, color: COLORS.no, paddingHorizontal: 10, marginBottom: 4 },
   tipoLibreChipText: { fontSize: 10, color: '#E65100' },
   hallazgoHeader: { flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingRight: 2, paddingTop: 4 },
   hallazgoHeaderSpacer: { flex: 1 },
