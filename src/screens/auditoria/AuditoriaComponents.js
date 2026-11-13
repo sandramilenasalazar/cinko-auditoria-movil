@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import {
   Text,
@@ -10,6 +10,7 @@ import {
   Chip,
   Menu,
   Divider,
+  Icon,
 } from 'react-native-paper';
 import { API_BASE_URL } from '../../api/config';
 
@@ -209,6 +210,35 @@ export function HallazgoItem({ hallazgo, onDelete, onEdit, onAddEvidencia, onDel
   );
 }
 
+// ─── GrupoHeader ─────────────────────────────────────────────────────────────
+// Título de un grupo (nivel1) que se abre/cierra, con resumen de avance y hallazgos.
+export const GrupoHeader = memo(function GrupoHeader({ id, titulo, abierto, auditados, total, conHallazgos, onToggle }) {
+  const estadoAvance =
+    total > 0 && auditados === total ? 'completo' : auditados > 0 ? 'parcial' : 'pendiente';
+  const avanceIcon = { completo: 'check-circle', parcial: 'circle-half-full', pendiente: 'circle-outline' }[estadoAvance];
+  const avanceColor = { completo: COLORS.si, parcial: COLORS.gold, pendiente: COLORS.gray }[estadoAvance];
+  const avanceTexto = { completo: 'completo', parcial: 'parcial', pendiente: 'sin empezar' }[estadoAvance];
+
+  return (
+    <TouchableOpacity
+      style={styles.grupoHeader}
+      onPress={() => onToggle(id)}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: abierto }}
+      accessibilityLabel={`${titulo}. ${auditados} de ${total} auditados, ${avanceTexto}${conHallazgos ? ', con hallazgos' : ''}. ${abierto ? 'Cerrar' : 'Abrir'} grupo`}
+    >
+      <Icon source={abierto ? 'chevron-down' : 'chevron-right'} size={22} color={COLORS.navy} />
+      <Text style={styles.grupoTitulo}>{titulo}</Text>
+      <View style={styles.grupoIconos}>
+        <Icon source={avanceIcon} size={18} color={avanceColor} />
+        {conHallazgos && <Icon source="alert" size={18} color={COLORS.no} />}
+        <Text style={styles.grupoContador}>{auditados}/{total}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
 // ─── Nivel2Item ──────────────────────────────────────────────────────────────
 // Los handlers llegan estables desde la pantalla y reciben el id del ítem como
 // primer argumento; así memo() evita volver a dibujar los ítems que no cambiaron.
@@ -226,6 +256,20 @@ export const Nivel2Item = memo(function Nivel2Item({
   onDeleteEvidencia,
 }) {
   const [localObs, setLocalObs] = useState(result.observaciones || '');
+
+  // La observación se guarda al salir del campo. Si el grupo se cierra con el campo
+  // aún en edición, el ítem se desmonta sin pasar por onBlur: se guarda al desmontar.
+  const obsRef = useRef(localObs);
+  const guardadoRef = useRef(result.observaciones || '');
+  const onObsBlurRef = useRef(onObsBlur);
+  obsRef.current = localObs;
+  onObsBlurRef.current = onObsBlur;
+  const guardarObs = () => {
+    if (obsRef.current === guardadoRef.current) return;
+    guardadoRef.current = obsRef.current;
+    onObsBlurRef.current(item.id, obsRef.current);
+  };
+  useEffect(() => () => guardarObs(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card style={[
@@ -247,7 +291,7 @@ export const Nivel2Item = memo(function Nivel2Item({
           label="Observaciones"
           value={localObs}
           onChangeText={setLocalObs}
-          onBlur={() => onObsBlur(item.id, localObs)}
+          onBlur={guardarObs}
           mode="outlined"
           multiline
           numberOfLines={2}
@@ -388,6 +432,20 @@ const styles = StyleSheet.create({
 
   // HallazgoItem
   tipoLibreChip: { backgroundColor: '#FFF3E0', alignSelf: 'flex-start' },
+  grupoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3E9FA',
+    paddingVertical: 10,
+    paddingLeft: 8,
+    paddingRight: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 6,
+  },
+  grupoTitulo: { flex: 1, fontWeight: '700', fontSize: 14, color: COLORS.navy },
+  grupoIconos: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  grupoContador: { fontSize: 12, fontWeight: '700', color: COLORS.navy, minWidth: 34, textAlign: 'right' },
   hallazgoChips: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   sinTipoChip: { backgroundColor: '#FFEBEE', alignSelf: 'flex-start' },
   sinTipoChipText: { fontSize: 10, color: COLORS.no, fontWeight: '700' },

@@ -1,8 +1,8 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, SectionList, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Text, ActivityIndicator, Snackbar } from 'react-native-paper';
+import { Text, ActivityIndicator, Snackbar, Button } from 'react-native-paper';
 import { useAuditoria } from '../hooks/useAuditoria';
-import { SyncBar, Nivel2Item, AuditoriaProgressBar, COLORS, DEFAULT_RESULT, isValidUri } from './auditoria/AuditoriaComponents';
+import { SyncBar, Nivel2Item, GrupoHeader, AuditoriaProgressBar, COLORS, DEFAULT_RESULT, isValidUri } from './auditoria/AuditoriaComponents';
 import { HallazgoModal } from './auditoria/HallazgoModal';
 import { FirmaModal } from './auditoria/FirmaModal';
 
@@ -41,11 +41,45 @@ export default function EjecutarAuditoriaScreen({ route }) {
     handleDeleteEvidencia,
     handleDeleteHallazgo,
     avance,
+    resumenGrupos,
     acompanante,
     firmaModalVisible,
     setFirmaModalVisible,
     handleGuardarAcompanante,
   } = useAuditoria(audProyecto.id);
+
+  // ── Grupos colapsables: todos empiezan cerrados; cada uno se abre por su cuenta
+  const [abiertos, setAbiertos] = useState(() => new Set());
+  const toggleGrupo = useCallback((id) => {
+    setAbiertos((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }, []);
+  const todosAbiertos = sections.length > 0 && sections.every((s) => abiertos.has(s.id));
+  const toggleTodos = useCallback(() => {
+    setAbiertos(todosAbiertos ? new Set() : new Set(sections.map((s) => s.id)));
+  }, [todosAbiertos, sections]);
+  // Un grupo cerrado pasa sus ítems vacíos: se ve el título pero no se dibuja ningún ítem
+  const seccionesVisibles = useMemo(
+    () => sections.map((s) => (abiertos.has(s.id) ? s : { ...s, data: [] })),
+    [sections, abiertos]
+  );
+  const renderSectionHeader = useCallback(({ section }) => {
+    const r = resumenGrupos.get(section.id) ?? { auditados: 0, total: 0, conHallazgos: false };
+    return (
+      <GrupoHeader
+        id={section.id}
+        titulo={section.title}
+        abierto={abiertos.has(section.id)}
+        auditados={r.auditados}
+        total={r.total}
+        conHallazgos={r.conHallazgos}
+        onToggle={toggleGrupo}
+      />
+    );
+  }, [resumenGrupos, abiertos, toggleGrupo]);
 
   // renderItem y handlers estables: cada ítem solo se vuelve a dibujar si cambió su resultado
   const renderItem = useCallback(({ item }) => (
@@ -78,16 +112,25 @@ export default function EjecutarAuditoriaScreen({ route }) {
     <View style={styles.container}>
       <SyncBar status={syncStatus} isOnline={isOnline} pendingCount={pendingCount} />
       <AuditoriaProgressBar porcentaje={avance.porcentaje} auditados={avance.auditados} total={avance.total} />
+      {sections.length > 0 && (
+        <View style={styles.toolbar}>
+          <Button
+            compact
+            mode="text"
+            icon={todosAbiertos ? 'unfold-less-horizontal' : 'unfold-more-horizontal'}
+            textColor={COLORS.primary}
+            onPress={toggleTodos}
+          >
+            {todosAbiertos ? 'Colapsar todo' : 'Expandir todo'}
+          </Button>
+        </View>
+      )}
 
       <SectionList
-        sections={sections}
+        sections={seccionesVisibles}
         keyExtractor={(item) => String(item.id)}
         stickySectionHeadersEnabled
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-          </View>
-        )}
+        renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
         // No reducir windowSize / maxToRenderPerBatch / initialNumToRender: los ítems tienen
         // alturas muy distintas y con una ventana pequeña la lista estima mal las posiciones
@@ -168,6 +211,7 @@ export default function EjecutarAuditoriaScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
+  toolbar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 8, paddingVertical: 2, backgroundColor: COLORS.white },
   container: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   list: { paddingBottom: 40 },

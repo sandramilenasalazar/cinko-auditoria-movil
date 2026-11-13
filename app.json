@@ -2,7 +2,7 @@
   "expo": {
     "name": "cinko-auditoria-movil",
     "slug": "cinko-auditoria-movil",
-    "version": "1.4.2",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.auditoria.movil",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

@@ -281,6 +281,24 @@ export function useAuditoria(idAud) {
     return { porcentaje, auditados, total };
   }, [sections, resultsMap]);
 
+  // Resumen por grupo (nivel1) para el título colapsable:
+  //   auditados/total → ítems con SI o NO marcado (mismo criterio que la barra de avance)
+  //   conHallazgos    → algún ítem tiene un hallazgo que suma (los "No suma" no cuentan)
+  const resumenGrupos = useMemo(() => {
+    const m = new Map();
+    for (const s of sections) {
+      let auditados = 0;
+      let conHallazgos = false;
+      for (const item of s.data) {
+        const r = resultsMap.get(item.id);
+        if (r?.estado === 'AUDITADO') auditados++;
+        if (!conHallazgos && (r?.hallazgos ?? []).some((h) => h.suma_hallazgo !== false)) conHallazgos = true;
+      }
+      m.set(s.id, { auditados, total: s.data.length, conHallazgos });
+    }
+    return m;
+  }, [sections, resultsMap]);
+
   const addSaving = (id) => setSaving((p) => new Set([...p, id]));
   const removeSaving = (id) => setSaving((p) => { const s = new Set(p); s.delete(id); return s; });
 
@@ -787,6 +805,7 @@ export function useAuditoria(idAud) {
     resultsMap,
     loading,
     avance,
+    resumenGrupos,
     authToken,
     saving,
     snackbar,
