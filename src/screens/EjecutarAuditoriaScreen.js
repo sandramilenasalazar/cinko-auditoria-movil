@@ -89,10 +89,9 @@ export default function EjecutarAuditoriaScreen({ route }) {
           </View>
         )}
         renderItem={renderItem}
-        // Menos ítems armados fuera de pantalla (cada ítem tiene campo de texto, menús y fotos)
-        initialNumToRender={6}
-        maxToRenderPerBatch={4}
-        windowSize={7}
+        // No reducir windowSize / maxToRenderPerBatch / initialNumToRender: los ítems tienen
+        // alturas muy distintas y con una ventana pequeña la lista estima mal las posiciones
+        // y la pantalla "brinca" de la mitad hacia abajo (bug de la v1.4.1).
         contentContainerStyle={styles.list}
         ListFooterComponent={
           <View style={styles.acompananteCard}>
