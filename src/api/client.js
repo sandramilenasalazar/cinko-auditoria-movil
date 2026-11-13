@@ -2,13 +2,15 @@ import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from './config';
 
 const TIMEOUT_MS = 10000;
+// Para descargas grandes (árbol completo de la auditoría) usar un límite mayor.
+export const TIMEOUT_DESCARGA_MS = 45000;
 
 const getToken = (key) => SecureStore.getItemAsync(key);
 const setToken = (key, val) => SecureStore.setItemAsync(key, val);
 
-const fetchWithTimeout = (url, options) => {
+const fetchWithTimeout = (url, options, timeoutMs = TIMEOUT_MS) => {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const id = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(id));
 };
@@ -25,18 +27,20 @@ export const refreshAccessToken = async () => {
   return data.access_token;
 };
 
+// options.timeoutMs (opcional): límite de espera de esta petición; por defecto 10 s.
 export const apiRequest = async (endpoint, options = {}) => {
   let accessToken = await getToken('access_token');
+  const { timeoutMs, ...fetchOptions } = options;
 
   const makeRequest = (token) =>
     fetchWithTimeout(`${API_BASE_URL}${endpoint}`, {
-      ...options,
+      ...fetchOptions,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
-        ...options.headers,
+        ...fetchOptions.headers,
       },
-    });
+    }, timeoutMs);
 
   let res = await makeRequest(accessToken);
 
@@ -46,9 +50,12 @@ export const apiRequest = async (endpoint, options = {}) => {
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const err = new Error(body.error || body.message || `Error ${res.status}`);
+    let body = null;
+    try { body = await res.json(); } catch (_) {}
+    const err = new Error(body?.error || body?.message || `Error ${res.status}`);
     err.status = res.status;
+    // sinJson = la respuesta no traía JSON (p. ej. 404 de una ruta que el servidor no conoce)
+    err.sinJson = body == null || typeof body !== 'object';
     throw err;
   }
 

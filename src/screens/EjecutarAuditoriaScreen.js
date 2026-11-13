@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, SectionList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Text, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { useAuditoria } from '../hooks/useAuditoria';
@@ -47,6 +47,24 @@ export default function EjecutarAuditoriaScreen({ route }) {
     handleGuardarAcompanante,
   } = useAuditoria(audProyecto.id);
 
+  // renderItem y handlers estables: cada ítem solo se vuelve a dibujar si cambió su resultado
+  const renderItem = useCallback(({ item }) => (
+    <Nivel2Item
+      item={item}
+      result={resultsMap.get(item.id) ?? DEFAULT_RESULT}
+      saving={saving.has(item.id)}
+      onConformeChange={handleConformeChange}
+      onObsBlur={handleObsBlur}
+      onAddHallazgo={openModal}
+      onDeleteHallazgo={handleDeleteHallazgo}
+      onEditHallazgo={openEditModal}
+      onAddEvidencia={handleAddEvidencia}
+      onDeleteEvidencia={handleDeleteEvidencia}
+      authToken={authToken}
+    />
+  ), [resultsMap, saving, authToken, handleConformeChange, handleObsBlur, openModal,
+      handleDeleteHallazgo, openEditModal, handleAddEvidencia, handleDeleteEvidencia]);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -70,21 +88,11 @@ export default function EjecutarAuditoriaScreen({ route }) {
             <Text style={styles.sectionTitle}>{section.title}</Text>
           </View>
         )}
-        renderItem={({ item }) => (
-          <Nivel2Item
-            item={item}
-            result={resultsMap.get(item.id) ?? DEFAULT_RESULT}
-            saving={saving.has(item.id)}
-            onConformeChange={(v) => handleConformeChange(item.id, v)}
-            onObsBlur={(obs) => handleObsBlur(item.id, obs)}
-            onAddHallazgo={() => openModal(item)}
-            onDeleteHallazgo={(uuid) => handleDeleteHallazgo(item.id, uuid)}
-            onEditHallazgo={(hallazgo) => openEditModal(item, hallazgo)}
-            onAddEvidencia={(hallazgoUuid, tipo) => handleAddEvidencia(item.id, hallazgoUuid, tipo)}
-            onDeleteEvidencia={(hallazgoUuid, evUuid) => handleDeleteEvidencia(item.id, hallazgoUuid, evUuid)}
-            authToken={authToken}
-          />
-        )}
+        renderItem={renderItem}
+        // Menos ítems armados fuera de pantalla (cada ítem tiene campo de texto, menús y fotos)
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={7}
         contentContainerStyle={styles.list}
         ListFooterComponent={
           <View style={styles.acompananteCard}>

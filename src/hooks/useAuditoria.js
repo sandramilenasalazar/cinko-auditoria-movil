@@ -209,6 +209,7 @@ export function useAuditoria(idAud) {
         let changed = false;
         const n = new Map(prev);
         n.forEach((item, idNivel2) => {
+          if (!item.hallazgos.some((h) => (h.evidencias ?? []).some((e) => e.pendiente))) return;
           const hallazgos = item.hallazgos.map((h) => {
             if (!(h.evidencias ?? []).some((e) => e.pendiente)) return h;
             changed = true;
@@ -335,7 +336,7 @@ export function useAuditoria(idAud) {
 
   // ── Blur de observaciones
   const handleObsBlur = useCallback(async (idNivel2, observaciones) => {
-    const item = resultsMap.get(idNivel2) ?? DEFAULT_RESULT;
+    const item = resultsMapRef.current.get(idNivel2) ?? DEFAULT_RESULT;
     if (!item.uuid && !observaciones.trim()) return;
 
     const uuid = item.uuid ?? generateUUID();
@@ -368,7 +369,7 @@ export function useAuditoria(idAud) {
     } finally {
       removeSaving(idNivel2);
     }
-  }, [resultsMap, idAud]);
+  }, [idAud]);
 
   // ── Modal
   const openModal = useCallback((item) => {

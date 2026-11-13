@@ -100,6 +100,7 @@ export function EvidenciaItem({ evidencia, onDelete, authToken }) {
         <Image
           source={validUri.startsWith('file://') ? { uri: validUri } : source}
           style={[styles.evidenciaThumb, evidencia.pendiente && styles.evidenciaThumbPendiente]}
+          resizeMethod="resize"
           onError={() => setNoDisponible(true)}
         />
       ) : evidencia.tipo === 'IMAGEN' ? (
@@ -209,6 +210,8 @@ export function HallazgoItem({ hallazgo, onDelete, onEdit, onAddEvidencia, onDel
 }
 
 // ─── Nivel2Item ──────────────────────────────────────────────────────────────
+// Los handlers llegan estables desde la pantalla y reciben el id del ítem como
+// primer argumento; así memo() evita volver a dibujar los ítems que no cambiaron.
 export const Nivel2Item = memo(function Nivel2Item({
   item,
   result,
@@ -236,7 +239,7 @@ export const Nivel2Item = memo(function Nivel2Item({
 
         <View style={styles.conformeSection}>
           <Text style={styles.fieldLabel}>Conforme</Text>
-          <ConformeToggle value={result.conforme} onChange={onConformeChange} disabled={saving} />
+          <ConformeToggle value={result.conforme} onChange={(v) => onConformeChange(item.id, v)} disabled={saving} />
           {saving && <ActivityIndicator size={14} color={COLORS.primary} style={styles.savingSpinner} />}
         </View>
 
@@ -244,7 +247,7 @@ export const Nivel2Item = memo(function Nivel2Item({
           label="Observaciones"
           value={localObs}
           onChangeText={setLocalObs}
-          onBlur={() => onObsBlur(localObs)}
+          onBlur={() => onObsBlur(item.id, localObs)}
           mode="outlined"
           multiline
           numberOfLines={2}
@@ -264,10 +267,10 @@ export const Nivel2Item = memo(function Nivel2Item({
                 key={h.uuid}
                 hallazgo={h}
                 authToken={authToken}
-                onDelete={() => onDeleteHallazgo(h.uuid)}
-                onEdit={() => onEditHallazgo(h)}
-                onAddEvidencia={(tipo) => onAddEvidencia(h.uuid, tipo)}
-                onDeleteEvidencia={(evUuid) => onDeleteEvidencia(h.uuid, evUuid)}
+                onDelete={() => onDeleteHallazgo(item.id, h.uuid)}
+                onEdit={() => onEditHallazgo(item, h)}
+                onAddEvidencia={(tipo) => onAddEvidencia(item.id, h.uuid, tipo)}
+                onDeleteEvidencia={(evUuid) => onDeleteEvidencia(item.id, h.uuid, evUuid)}
               />
             ))
           )}
@@ -275,7 +278,7 @@ export const Nivel2Item = memo(function Nivel2Item({
 
         <Button
           mode="outlined"
-          onPress={onAddHallazgo}
+          onPress={() => onAddHallazgo(item)}
           icon="plus"
           compact
           textColor={COLORS.primary}

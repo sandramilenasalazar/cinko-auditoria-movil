@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, ToastAndroid } from 'react-native';
 import { Text, Card, Chip, Divider, ActivityIndicator, Button, IconButton } from 'react-native-paper';
 import * as Clipboard from 'expo-clipboard';
-import { getAudProyecto } from '../api/proyectos';
+import { getAudProyecto, getResumenProyecto } from '../api/proyectos';
 import { getAuditoriaPaquete } from '../api/auditoria';
 import { logError } from '../services/errorLogger';
 
@@ -54,15 +54,52 @@ export default function ProyectoDetalleScreen({ route, navigation }) {
   const [paquete, setPaquete] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [loadingPaquete, setLoadingPaquete] = useState(false);
+
   useEffect(() => {
-    getAudProyecto(proyecto.id_proyecto ?? proyecto.id)
-      .then((data) => {
-        setAudProyecto(data);
-        return getAuditoriaPaquete(data.id);
+    let activo = true;
+    const idProyecto = proyecto.id_proyecto ?? proyecto.id;
+
+    // Flujo anterior (servidor sin /resumen): auditoría y luego el paquete completo
+    const cargarFlujoAnterior = () =>
+      getAudProyecto(idProyecto)
+        .then((data) => {
+          if (!activo) return;
+          // La sección Auditoría y el botón no esperan al paquete
+          setAudProyecto(data);
+          setLoading(false);
+          setLoadingPaquete(true);
+          getAuditoriaPaquete(data.id)
+            .then((p) => { if (activo) setPaquete(p); })
+            .catch((e) => { logError('ProyectoDetalle', 'loadPaquete', e, true); })
+            .finally(() => { if (activo) setLoadingPaquete(false); });
+        })
+        .catch((e) => {
+          logError('ProyectoDetalle', 'loadAudProyecto', e, true);
+          if (activo) setLoading(false);
+        });
+
+    // Una sola petición liviana (~1 KB) con auditoría, proyecto y máquinas
+    getResumenProyecto(idProyecto)
+      .then((r) => {
+        if (!activo) return;
+        setAudProyecto(r?.auditoria ?? null);
+        setPaquete({ proyecto: r?.proyecto ?? null, maquinas: r?.maquinas ?? [] });
+        setLoading(false);
       })
-      .then(setPaquete)
-      .catch((e) => { logError('ProyectoDetalle', 'loadAudProyecto', e, true); })
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (!activo) return;
+        if (e?.status === 404) {
+          // Ruta inexistente (servidor viejo) o sin auditoría en proceso: el flujo
+          // anterior distingue ambos casos sin arriesgar ocultar el botón por error.
+          cargarFlujoAnterior();
+          return;
+        }
+        logError('ProyectoDetalle', 'loadResumen', e, true);
+        setLoading(false);
+      });
+
+    return () => { activo = false; };
   }, [proyecto]);
 
   return (
@@ -122,7 +159,12 @@ export default function ProyectoDetalleScreen({ route, navigation }) {
         <Campo label="Fin real" value={formatFecha(proyecto.fecha_fin_real)} />
       </Seccion>
 
-      {/* Máquinas */}
+      {/* Máquinas (llegan con el paquete) */}
+      {loadingPaquete && !paquete && (
+        <Seccion titulo="Máquinas">
+          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 8 }} />
+        </Seccion>
+      )}
       {paquete?.maquinas?.length > 0 && (
         <Seccion titulo="Máquinas">
           {paquete.maquinas.map((m, idx) => (

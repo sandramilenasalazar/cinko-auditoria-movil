@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, Image, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, Image, StyleSheet, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
 const LOGO = require('../../img/Logo5ing3.png');
@@ -58,10 +58,25 @@ export default function AppNavigator() {
               name="EjecutarAuditoria"
               component={EjecutarAuditoriaScreen}
               options={({ route }) => ({
-                title: route.params?.proyecto?.nombre ?? 'Ejecutar Auditoría',
+                title:
+                  route.params?.proyecto?.nombre ||
+                  route.params?.proyecto?.nombre_proyecto ||
+                  'Ejecutar Auditoría',
                 headerStyle: { backgroundColor: '#1A3ABF' },
                 headerTintColor: '#FFFFFF',
-                headerTitleStyle: { fontWeight: '700' },
+                // Nombres de proyecto largos: hasta 2 líneas, letra más pequeña y,
+                // si aún no cabe, se reduce sola antes de cortar el texto.
+                headerTitle: ({ children, tintColor }) => (
+                  <Text
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    style={[styles.headerTitleLargo, { color: tintColor }]}
+                  >
+                    {children}
+                  </Text>
+                ),
+                headerTitleContainerStyle: { marginLeft: 0, marginRight: 12 },
               })}
             />
           </>
@@ -81,5 +96,10 @@ const styles = StyleSheet.create({
   splashLogo: {
     width: 260,
     height: 130,
+  },
+  headerTitleLargo: {
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '700',
   },
 });

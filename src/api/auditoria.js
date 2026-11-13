@@ -1,8 +1,9 @@
-import { apiRequest } from './client';
+import { apiRequest, TIMEOUT_DESCARGA_MS } from './client';
 
-// Carga estructura completa: nivel1 > nivel2 > resultado_item + hallazgos + hallazgos_def
+// Carga estructura completa: nivel1 > nivel2 > resultado_item + hallazgos + hallazgos_def.
+// Es la descarga más pesada (cientos de KB): se le da más tiempo que al resto.
 export const getAuditoriaItems = (idAudProyecto) =>
-  apiRequest(`/auditoria/${idAudProyecto}/items`);
+  apiRequest(`/auditoria/${idAudProyecto}/items`, { timeoutMs: TIMEOUT_DESCARGA_MS });
 
 // Crea o actualiza un resultado_item (upsert por uuid)
 export const upsertResultadoItem = (idAudProyecto, uuid, body) =>

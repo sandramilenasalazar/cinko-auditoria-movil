@@ -38,14 +38,10 @@ function ProyectoCard({ proyecto, onPress }) {
   return (
     <Card style={styles.card} onPress={onPress}>
       <Card.Content>
-        <View style={styles.cardHeader}>
-          <Text style={styles.nombreProyecto} numberOfLines={2}>
-            {proyecto.nombre || proyecto.nombre_proyecto || '(Sin nombre)'}
-          </Text>
-          <Chip compact style={styles.chipEnProceso} textStyle={styles.chipText}>
-            EN PROCESO
-          </Chip>
-        </View>
+        {/* Nombre completo, a todo el ancho de la tarjeta */}
+        <Text style={styles.nombreProyecto}>
+          {proyecto.nombre || proyecto.nombre_proyecto || '(Sin nombre)'}
+        </Text>
 
         {proyecto.obra && (
           <Text style={styles.obraSubtitle}>{proyecto.obra}</Text>
@@ -64,6 +60,9 @@ function ProyectoCard({ proyecto, onPress }) {
           {proyecto.fecha_fin_pactado && (
             <InfoItem icon="◀" label="Fin pactado" value={formatFecha(proyecto.fecha_fin_pactado)} />
           )}
+          <Chip compact style={styles.chipEnProceso} textStyle={styles.chipText}>
+            EN PROCESO
+          </Chip>
         </View>
       </Card.Content>
     </Card>
@@ -207,25 +206,19 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: COLORS.gold,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-    gap: 8,
-  },
   nombreProyecto: {
-    flex: 1,
     fontWeight: '700',
     fontSize: 14,
+    lineHeight: 19,
     color: COLORS.navy,
+    marginBottom: 4,
   },
-  chipEnProceso: { backgroundColor: '#FFF3E0' },
+  chipEnProceso: { backgroundColor: '#FFF3E0', marginLeft: 'auto', alignSelf: 'center' },
   chipText: { color: '#E65100', fontSize: 10, fontWeight: '700' },
   obraSubtitle: { color: COLORS.gray, fontSize: 12, fontStyle: 'italic', marginBottom: 2 },
   contrato: { color: COLORS.gray, fontSize: 12, marginBottom: 4 },
   divider: { marginVertical: 8, backgroundColor: COLORS.border },
-  fechasRow: { flexDirection: 'row', gap: 16 },
+  fechasRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   infoItem: {},
   infoLabel: { color: COLORS.gray, fontSize: 11 },
   infoValue: { color: COLORS.navy, fontSize: 13, fontWeight: '600' },
