@@ -27,6 +27,7 @@ import {
 } from '../services/offlineStore';
 import { verificarArchivoLocal, guardarCopiaPersistente, borrarCopiaPersistente } from '../services/evidenciaFiles';
 import { syncPendingData } from '../services/syncAuditoria';
+import { tipoLibreValido, refrescarTipos } from '../services/tiposHallazgo';
 import { DEFAULT_RESULT, generateUUID, buildUri } from '../screens/auditoria/AuditoriaComponents';
 
 const RETRY_TICK_MS = 60 * 1000;
@@ -161,6 +162,8 @@ export function useAuditoria(idAud) {
     getAcompanante(idAud)
       .then((data) => setAcompanante(data))
       .catch(() => {});
+
+    refrescarTipos();
   }, [idAud]);
 
   useEffect(() => {
@@ -410,7 +413,7 @@ export function useAuditoria(idAud) {
   }, []);
 
   const openEditModal = useCallback((item, hallazgo) => {
-    setEditingHallazgo({ uuid: hallazgo.uuid, idNivel2: item.id });
+    setEditingHallazgo({ uuid: hallazgo.uuid, idNivel2: item.id, tipoOriginal: hallazgo.tipo_libre ?? null });
     setModalItem(item);
     setModalMode(hallazgo.id_hallazgo_def ? 'predefinido' : 'libre');
     setSelectedHallazgoDef(
@@ -436,8 +439,8 @@ export function useAuditoria(idAud) {
 
     if (esPredefinido && !selectedHallazgoDef) return;
     if (!esPredefinido && !freeText.trim()) return;
-    if (!esPredefinido && !['MANTENIMIENTO', 'NORMA'].includes(tipoLibre)) {
-      setSnackbar('Elige el tipo del hallazgo: Mantenimiento o Norma');
+    if (!esPredefinido && !tipoLibreValido(tipoLibre)) {
+      setSnackbar('Elige el tipo del hallazgo');
       return;
     }
 

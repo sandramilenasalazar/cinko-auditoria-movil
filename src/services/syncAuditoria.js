@@ -12,8 +12,8 @@ import {
   eliminarHallazgoLocal,
 } from './offlineStore';
 import { verificarArchivoLocal, borrarCopiaPersistente } from './evidenciaFiles';
+import { tipoLibreValido } from './tiposHallazgo';
 
-const TIPOS_LIBRE = ['MANTENIMIENTO', 'NORMA'];
 
 // Evita dos sincronizaciones al mismo tiempo (reconexión + temporizador).
 let syncEnCurso = null;
@@ -73,7 +73,7 @@ async function doSync(idAudProyecto) {
     if (hallazgosConflicto.has(h.uuid)) continue;
     const esLibre = h.id_hallazgo_def == null;
     // Un libre nunca se envía sin tipo: queda pendiente hasta que el usuario lo elija.
-    if (esLibre && !TIPOS_LIBRE.includes(h.tipo_libre)) {
+    if (esLibre && !tipoLibreValido(h.tipo_libre)) {
       logError('sync', 'addHallazgo', new Error(`hallazgo libre ${h.uuid} sin tipo_libre; no se envía`), true);
       continue;
     }

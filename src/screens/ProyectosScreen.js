@@ -16,6 +16,7 @@ import {
 } from 'react-native-paper';
 import { useAuthStore } from '../store/authStore';
 import { getProyectos } from '../api/proyectos';
+import { refrescarTipos } from '../services/tiposHallazgo';
 
 const LOGO = require('../../img/Logo5ingblanco2.png');
 
@@ -109,6 +110,7 @@ export default function ProyectosScreen({ navigation }) {
 
   useEffect(() => {
     cargarProyectos().finally(() => setLoading(false));
+    refrescarTipos(); // catálogo de tipos de hallazgo (queda guardado para trabajar sin conexión)
   }, [cargarProyectos]);
 
   const onRefresh = async () => {

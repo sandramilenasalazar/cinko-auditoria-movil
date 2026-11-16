@@ -13,6 +13,7 @@ import {
   Icon,
 } from 'react-native-paper';
 import { API_BASE_URL } from '../../api/config';
+import { useTiposHallazgo, tipoInfo } from '../../services/tiposHallazgo';
 
 export const COLORS = {
   primary: '#1A3ABF',
@@ -51,12 +52,22 @@ export const buildUri = (uri) =>
 export const isValidUri = (uri) =>
   typeof uri === 'string' && uri.length > 0 && /^(https?|file):\/\//i.test(uri);
 
-// Etiquetas visibles para el tipo de hallazgo
-export const TIPO_LABEL = {
-  MANTENIMIENTO: '🔧 Mantenimiento',
-  NORMA: '📜 Norma',
-};
-export const tipoLabel = (tipo) => TIPO_LABEL[tipo] ?? tipo;
+// ─── TipoChip ────────────────────────────────────────────────────────────────
+// Etiqueta de un tipo de hallazgo con ícono, nombre y color del catálogo del servidor.
+// Si el código no está en el catálogo local se muestra tal cual, en gris.
+export function TipoChip({ codigo, tipos, style }) {
+  const t = tipoInfo(codigo, tipos);
+  const texto = t.icono ? `${t.icono} ${t.nombre}` : t.nombre;
+  return (
+    <Chip
+      compact
+      style={[styles.tipoChipBase, { backgroundColor: `${t.color}1F`, borderColor: `${t.color}66` }, style]}
+      textStyle={[styles.tipoChipTextBase, { color: t.color }]}
+    >
+      {texto}
+    </Chip>
+  );
+}
 
 // ─── ConformeToggle ──────────────────────────────────────────────────────────
 export function ConformeToggle({ value, onChange, disabled }) {
@@ -134,6 +145,7 @@ export function HallazgoItem({ hallazgo, onDelete, onEdit, onAddEvidencia, onDel
       ? `${hallazgo.descripcion}: ${hallazgo.hallazgo_libre}`
       : hallazgo.descripcion
     : hallazgo.hallazgo_libre;
+  const tipos = useTiposHallazgo();
   const esLibre = !hallazgo.id_hallazgo_def;
   const tipoVisible = esLibre ? hallazgo.tipo_libre : hallazgo.tipo;
   const fotosConError = (hallazgo.evidencias ?? []).filter((e) => e.pendiente && e.error);
@@ -152,9 +164,7 @@ export function HallazgoItem({ hallazgo, onDelete, onEdit, onAddEvidencia, onDel
               ⚠ Sin tipo — toca para elegir
             </Chip>
           ) : tipoVisible ? (
-            <Chip compact style={styles.tipoLibreChip} textStyle={styles.tipoLibreChipText}>
-              {tipoLabel(tipoVisible)}
-            </Chip>
+            <TipoChip codigo={tipoVisible} tipos={tipos} />
           ) : null}
           {hallazgo.suma_hallazgo === false && (
             <Chip compact style={styles.noSumaChip} textStyle={styles.noSumaChipText}>
@@ -431,7 +441,8 @@ const styles = StyleSheet.create({
   evidenciaDeleteText: { color: COLORS.white, fontSize: 9, fontWeight: '700' },
 
   // HallazgoItem
-  tipoLibreChip: { backgroundColor: '#FFF3E0', alignSelf: 'flex-start' },
+  tipoChipBase: { alignSelf: 'flex-start', borderWidth: 1 },
+  tipoChipTextBase: { fontSize: 10, fontWeight: '600' },
   grupoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -461,7 +472,6 @@ const styles = StyleSheet.create({
   evidenciaBadgeError: { backgroundColor: '#FFEBEE' },
   evidenciaBadgeText: { fontSize: 10 },
   evidenciaErrorText: { fontSize: 11, color: COLORS.no, paddingHorizontal: 10, marginBottom: 4 },
-  tipoLibreChipText: { fontSize: 10, color: '#E65100' },
   hallazgoHeader: { flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingRight: 2, paddingTop: 4 },
   hallazgoHeaderSpacer: { flex: 1 },
   menuIcon: { margin: 0, padding: 0 },

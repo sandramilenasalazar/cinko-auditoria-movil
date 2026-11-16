@@ -1,10 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from './config';
+import { APP_VERSION_HEADER } from './appVersion';
 
 export const login = async (username, password) => {
   const res = await fetch(`${API_BASE_URL}/auth/token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...APP_VERSION_HEADER },
     body: JSON.stringify({ username, password }),
   });
 

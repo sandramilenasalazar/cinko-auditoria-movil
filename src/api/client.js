@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from './config';
+import { APP_VERSION_HEADER } from './appVersion';
 
 const TIMEOUT_MS = 10000;
 // Para descargas grandes (árbol completo de la auditoría) usar un límite mayor.
@@ -11,7 +12,12 @@ const setToken = (key, val) => SecureStore.setItemAsync(key, val);
 const fetchWithTimeout = (url, options, timeoutMs = TIMEOUT_MS) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { ...options, signal: controller.signal })
+  // X-App-Version va en todas las peticiones (incluida la renovación del token)
+  return fetch(url, {
+    ...options,
+    headers: { ...APP_VERSION_HEADER, ...options.headers },
+    signal: controller.signal,
+  })
     .finally(() => clearTimeout(id));
 };
 

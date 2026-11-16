@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, ToastAndroid } from 'react-native';
 import { Text, Card, Chip, Divider, ActivityIndicator, Button, IconButton } from 'react-native-paper';
 import * as Clipboard from 'expo-clipboard';
 import { getAudProyecto, getResumenProyecto } from '../api/proyectos';
+import { guardarTipos } from '../services/tiposHallazgo';
 import { getAuditoriaPaquete } from '../api/auditoria';
 import { logError } from '../services/errorLogger';
 
@@ -70,7 +71,10 @@ export default function ProyectoDetalleScreen({ route, navigation }) {
           setLoading(false);
           setLoadingPaquete(true);
           getAuditoriaPaquete(data.id)
-            .then((p) => { if (activo) setPaquete(p); })
+            .then((p) => {
+              if (p?.tipos_hallazgo) guardarTipos(p.tipos_hallazgo);
+              if (activo) setPaquete(p);
+            })
             .catch((e) => { logError('ProyectoDetalle', 'loadPaquete', e, true); })
             .finally(() => { if (activo) setLoadingPaquete(false); });
         })

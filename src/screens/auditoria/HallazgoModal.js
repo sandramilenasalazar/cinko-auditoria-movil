@@ -10,7 +10,8 @@ import {
   TouchableRipple,
   Chip,
 } from 'react-native-paper';
-import { COLORS, tipoLabel } from './AuditoriaComponents';
+import { COLORS, TipoChip } from './AuditoriaComponents';
+import { useTiposHallazgo, opcionesTipoLibre } from '../../services/tiposHallazgo';
 
 export function HallazgoModal({
   visible,
@@ -25,10 +26,15 @@ export function HallazgoModal({
   tipoLibre,
   onTipoLibreChange,
   isEditing,
+  tipoOriginal,
   resultsMap,
   onConfirm,
   kbHeight,
 }) {
+  const tipos = useTiposHallazgo();
+  // Opciones para libres: activos que permiten libre; si el hallazgo editado ya tenía
+  // un tipo inactivo se conserva como opción para que no se cambie sin querer.
+  const opciones = opcionesTipoLibre(tipoOriginal ?? null, tipos);
   const hallazgosDef = item?.hallazgos_def ?? [];
   const hallazgosAgregados = resultsMap?.get(item?.id)?.hallazgos ?? [];
 
@@ -98,9 +104,7 @@ export function HallazgoModal({
                       ]}
                     >
                       <View style={styles.hallazgoDefContent}>
-                        <Chip compact style={styles.tipoChip} textStyle={styles.tipoChipText}>
-                          {tipoLabel(hd.tipo)}
-                        </Chip>
+                        <TipoChip codigo={hd.tipo} tipos={tipos} />
                         <View style={styles.hallazgoDefTextWrap}>
                           <Text style={[styles.hallazgoDefText, yaAgregado && styles.hallazgoDefTextDisabled]}>
                             {hd.descripcion}
@@ -137,24 +141,34 @@ export function HallazgoModal({
           {mode === 'libre' && (
             <>
               <Text style={styles.modalSectionLabel}>Tipo de hallazgo (obligatorio)</Text>
-              <View style={styles.tipoLibreTabs}>
-                {['MANTENIMIENTO', 'NORMA'].map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    style={[styles.tipoLibreTab, tipoLibre === t && styles.tipoLibreTabActive]}
-                    onPress={() => onTipoLibreChange(t)}
-                  >
-                    <Text style={[styles.tipoLibreTabText, tipoLibre === t && styles.tipoLibreTabTextActive]}>
-                      {tipoLabel(t)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.tipoOpciones}>
+                {opciones.map((t) => {
+                  const activo = tipoLibre === t.codigo;
+                  const nombre = t.inactivo ? `${t.nombre} (inactivo)` : t.nombre;
+                  return (
+                    <TouchableOpacity
+                      key={t.codigo}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: activo }}
+                      style={[
+                        styles.tipoOpcion,
+                        { borderColor: t.color },
+                        activo && { backgroundColor: t.color },
+                      ]}
+                      onPress={() => onTipoLibreChange(t.codigo)}
+                    >
+                      <Text style={[styles.tipoOpcionText, { color: activo ? COLORS.white : t.color }]}>
+                        {t.icono ? `${t.icono} ${nombre}` : nombre}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
               {!tipoLibre && (
                 <Text style={styles.tipoRequeridoText}>
                   {isEditing
-                    ? '⚠ Este hallazgo no tiene tipo. Elige Mantenimiento o Norma para guardarlo.'
-                    : 'Elige Mantenimiento o Norma para poder guardar.'}
+                    ? '⚠ Este hallazgo no tiene tipo. Elige uno para guardarlo.'
+                    : 'Elige el tipo de hallazgo para poder guardar.'}
                 </Text>
               )}
               <Text style={styles.modalSectionLabel}>Describe el hallazgo</Text>
@@ -220,8 +234,6 @@ const styles = StyleSheet.create({
   hallazgoDefRowDisabled: { opacity: 0.5 },
   hallazgoDefRowSelected: { backgroundColor: '#E8EEF9', borderRadius: 6 },
   hallazgoDefContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  tipoChip: { backgroundColor: '#E3F2FD' },
-  tipoChipText: { fontSize: 10, color: COLORS.primary },
   hallazgoDefText: { fontSize: 13, color: COLORS.navy },
   hallazgoDefTextDisabled: { color: COLORS.gray },
   yaAgregadoText: { color: COLORS.si, fontWeight: '700', fontSize: 14 },
@@ -252,16 +264,7 @@ const styles = StyleSheet.create({
   hallazgoDefTextWrap: { flex: 1 },
   noSumaText: { fontSize: 11, color: COLORS.si, marginTop: 2 },
   tipoRequeridoText: { fontSize: 12, color: COLORS.no, marginTop: -8, marginBottom: 12 },
-  tipoLibreTabs: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  tipoLibreTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: COLORS.white },
-  tipoLibreTabActive: { backgroundColor: COLORS.primary },
-  tipoLibreTabText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
-  tipoLibreTabTextActive: { color: COLORS.white },
+  tipoOpciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  tipoOpcion: { borderWidth: 1.5, borderRadius: 18, paddingVertical: 7, paddingHorizontal: 14 },
+  tipoOpcionText: { fontSize: 13, fontWeight: '600' },
 });

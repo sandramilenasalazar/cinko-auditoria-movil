@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from './config';
 import { apiRequest, refreshAccessToken } from './client';
+import { APP_VERSION_HEADER } from './appVersion';
 
 const UPLOAD_TIMEOUT_MS = 30000;
 
@@ -53,7 +54,7 @@ const postEvidencia = async (url, buildForm, token) => {
   try {
     return await fetch(url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, ...APP_VERSION_HEADER },
       body: buildForm(),
       signal: controller.signal,
     });

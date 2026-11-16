@@ -194,6 +194,15 @@ export const initDatabase = () => {
     database.execSync(`ALTER TABLE aud_resultado_hallazgo ADD COLUMN tipo_libre TEXT`);
   } catch (_) {}
 
+  // Caché local clave/valor (p. ej. catálogo de tipos de hallazgo para trabajar sin conexión)
+  database.execSync(`
+    CREATE TABLE IF NOT EXISTS app_cache (
+      clave      TEXT PRIMARY KEY,
+      valor      TEXT NOT NULL,
+      updated_at TEXT
+    );
+  `);
+
   // Migración (solo BD local): control de reintentos de subida de evidencias
   for (const col of [
     'intentos INTEGER DEFAULT 0',

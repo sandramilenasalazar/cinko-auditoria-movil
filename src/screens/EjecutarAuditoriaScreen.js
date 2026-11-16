@@ -193,6 +193,7 @@ export default function EjecutarAuditoriaScreen({ route }) {
         tipoLibre={tipoLibre}
         onTipoLibreChange={setTipoLibre}
         isEditing={!!editingHallazgo}
+        tipoOriginal={editingHallazgo?.tipoOriginal ?? null}
         resultsMap={resultsMap}
         onConfirm={handleConfirmHallazgo}
         kbHeight={kbHeight}
